@@ -1,26 +1,39 @@
-IF (CHECK_INCLUDE_DIR)
-  # Already in cache, be silent
-  SET(CHECK_FIND_QUIETLY TRUE)
-ENDIF (CHECK_INCLUDE_DIR)
+# -- Try to find check library
+# Once done this will define
+# 	CHECK_FOUND -- system has check library
+# 	CHECK_INCLUDE_DIRS
+# 	CHECK_LIBRARIES
 
-FIND_PATH(CHECK_INCLUDE_DIR NAMES check.h)
+find_package(PkgConfig)
+pkg_check_modules(PC_CHECK QUIET check)
+set(CHECK_DEFINITIONS ${PC_CHECK_CFLAGS_OTHER})
 
-# Look for the library.
-FIND_LIBRARY(CHECK_LIBRARY NAMES check)
+find_path(CHECK_INCLUDE_DIR check.h
+          HINTS ${PC_CHECK_INCLUDEDIR} ${PC_CHECK_INCLUDE_DIRS} 
+          PATHS ENV CHECK_INC
+          PATH_SUFFIXES check )
 
-IF(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 2.4)
-  # handle the QUIETLY and REQUIRED arguments and set CHECK_FOUND to TRUE if
-  # all listed variables are TRUE
-  INCLUDE(FindPackageHandleStandardArgs)
+find_library(CHECK_LIBRARY NAMES check libcheck
+             HINTS ${PC_CHECK_LIBDIR} ${PC_CHECK_LIBRARY_DIRS} 
+             PATHS ENV CHECK_BINARY )
 
-  FIND_PACKAGE_HANDLE_STANDARD_ARGS(Check "Please install 'check' and 'check-devel' packages" CHECK_LIBRARY CHECK_INCLUDE_DIR)
-ENDIF(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 2.4)
+set(CHECK_LIBRARIES ${CHECK_LIBRARY} )
+set(CHECK_INCLUDE_DIRS ${CHECK_INCLUDE_DIR} )
 
-IF(CHECK_FOUND)
-  SET( CHECK_LIBRARIES ${CHECK_LIBRARY} )
-ELSE(CHECK_FOUND)
-  SET( CHECK_LIBRARIES )
-ENDIF(CHECK_FOUND)
+include(FindPackageHandleStandardArgs)
+# handle the QUIETLY and REQUIRED arguments and set CHECK_FOUND to TRUE
+# if all listed variables are TRUE
+find_package_handle_standard_args(Check  DEFAULT_MSG
+                                  CHECK_LIBRARY CHECK_INCLUDE_DIR)
 
-MARK_AS_ADVANCED(CHECK_INCLUDE_DIR)
-MARK_AS_ADVANCED(CHECK_LIBRARY)
+mark_as_advanced(CHECK_INCLUDE_DIR CHECK_LIBRARY )
+
+IF(CHECK_LIBRARIES)
+  IF(CHECK_INCLUDE_DIR)
+
+    SET(CHECK_FOUND 1)
+    
+    MESSAGE(STATUS "Using Check from ${CHECK_LIBRARY}")
+
+  ENDIF(CHECK_INCLUDE_DIR)
+ENDIF(CHECK_LIBRARIES)
