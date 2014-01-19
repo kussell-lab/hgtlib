@@ -4,6 +4,7 @@ find_package(GSL REQUIRED)
 find_package(ArgTable REQUIRED)
 include_directories(${CHECK_INCLUDE_DIR} ${GSL_INCLUDE_DIR} ${ARGTABLE_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${CHECK_LIBRARIES} ${GSL_LIBRARIES} ${ARGTABLE_LIBRARIES} hgt)
+set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} ${CHECK_CFLAGS_OTHER})
 include_directories(. ../src)
 
 add_executable(test_hgt_corr test_hgt_corr.c)

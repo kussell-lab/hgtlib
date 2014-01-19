@@ -19,6 +19,7 @@ find_library(CHECK_LIBRARY NAMES check libcheck
 
 set(CHECK_LIBRARIES ${CHECK_LIBRARY} )
 set(CHECK_INCLUDE_DIRS ${CHECK_INCLUDE_DIR} )
+set(CHECK_CFLAGS_OTHER ${PC_CHECK_CFLAGS_OTHER})
 
 include(FindPackageHandleStandardArgs)
 # handle the QUIETLY and REQUIRED arguments and set CHECK_FOUND to TRUE
