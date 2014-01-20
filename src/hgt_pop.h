@@ -17,14 +17,11 @@ typedef struct {
     // cache
     unsigned long * survived;
     unsigned long * new_born;
+    int cache_allocated;
 } hgt_pop;
 
-hgt_pop * hgt_pop_alloc(unsigned long size, unsigned long seq_len, const gsl_rng * r);
-hgt_pop * hgt_pop_copy(hgt_pop * p);
-int hgt_pop_free(hgt_pop * r);
-
 typedef struct {
-	// population parameters
+    // population parameters
     unsigned long size;     // population size
     unsigned long seq_len;  // genome length
     double mu_rate;         // mutation rate
@@ -45,6 +42,33 @@ typedef struct {
     int fit_range; // fitting range
     int fit_flat;  // fitting flat
 } hgt_pop_params;
+
+hgt_pop * hgt_pop_alloc(unsigned long size, unsigned long seq_len, const gsl_rng * r);
+hgt_pop * hgt_pop_copy(hgt_pop * p);
+int hgt_pop_free(hgt_pop * r);
+
+int hgt_pop_mutate_at(hgt_pop *p, unsigned long g, unsigned long s, const gsl_rng *r);
+int hgt_pop_mutate(hgt_pop *p, const gsl_rng *r);
+int hgt_pop_transfer_at(hgt_pop *p, 
+                        unsigned long donor, 
+                        unsigned long reciever, 
+                        unsigned long frag_len, 
+                        unsigned long start);
+int hgt_pop_transfer(hgt_pop *p, unsigned long frag_len, const gsl_rng *r);
+
+typedef int (*hgt_pop_sample_func)(hgt_pop *p, const gsl_rng *r);
+int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r);
+int hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r);
+
+typedef double (*hgt_pop_coal_time_func)(unsigned long p_size, const gsl_rng *r);
+double hgt_pop_coal_time_moran(unsigned long p_size, const gsl_rng *r);
+double hgt_pop_coal_time_wf(unsigned long p_size, const gsl_rng *r);
+
+int hgt_pop_evolve(hgt_pop *p, 
+                   hgt_pop_params *params, 
+                   hgt_pop_sample_func sample_f, 
+                   hgt_pop_coal_time_func c_time_f, 
+                   const gsl_rng *r);
 
 int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * progname);
 int hgt_pop_params_free(hgt_pop_params *params);

@@ -10,10 +10,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
 #include <argtable2.h>
 #include "hgt_pop.h"
 
-const char * DNA = "ATGC\0";
+const char DNA[5] = "ATGC\0";
+const int NUM_DNA_CHAR = 4;
 
 hgt_pop * hgt_pop_alloc(unsigned long size, unsigned long seq_len, const gsl_rng * r) {
     char * ancestor;
@@ -35,9 +37,9 @@ hgt_pop * hgt_pop_alloc(unsigned long size, unsigned long seq_len, const gsl_rng
         strcpy(p->genomes[i], ancestor);
     }
     
-    // initilize caches
-    p->survived = (unsigned long *) calloc(size, sizeof(unsigned long));
-    p->new_born = (unsigned long *) calloc(size, sizeof(unsigned long));
+    p->survived = NULL;
+    p->new_born = NULL;
+    p->cache_allocated = 0;
     
     free(ancestor);
     return p;
@@ -67,8 +69,10 @@ int hgt_pop_free(hgt_pop * p) {
         free(p->genomes[i]);
     }
     free(p->genomes);
-    free(p->survived);
-    free(p->new_born);
+    if (p->cache_allocated != 0) {
+        free(p->survived);
+        free(p->new_born);
+    }
     free(p);
     
     return EXIT_SUCCESS;
@@ -154,6 +158,130 @@ int hgt_pop_params_free(hgt_pop_params *params){
     free(params);
 
     return EXIT_SUCCESS;
+}
+
+int hgt_pop_mutate_at(hgt_pop *p, unsigned long g, unsigned long s, const gsl_rng *r) {
+    int exit_code;
+    exit_code = EXIT_SUCCESS;
+
+    char c;
+    c = DNA[gsl_rng_uniform_int(r, NUM_DNA_CHAR)];
+    while (c == p->genomes[g][s]) {
+        c = DNA[gsl_rng_uniform_int(r, NUM_DNA_CHAR)];
+    }
+    p->genomes[g][s] = c;
+
+    return exit_code;
+}
+
+int hgt_pop_mutate(hgt_pop *p, const gsl_rng *r) {
+    int exit_code;
+    exit_code = EXIT_SUCCESS;
+    unsigned long g, s;
+    g = gsl_rng_uniform_int(r, p->size);
+    s = gsl_rng_uniform_int(r, p->seq_len);
+    hgt_pop_mutate_at(p, g, s, r);
+    return exit_code;
+}
+
+int hgt_pop_transfer_at(hgt_pop *p, 
+                        unsigned long donor, 
+                        unsigned long receiver, 
+                        unsigned long frag_len, 
+                        unsigned long start)
+{
+    int exit_code;
+    exit_code = EXIT_SUCCESS;
+
+    if (start + frag_len < p->seq_len) {
+        strncpy(p->genomes[receiver]+start, p->genomes[donor]+start, frag_len);
+    } else {
+        strcpy(p->genomes[receiver]+start, p->genomes[donor]+start);
+        strncpy(p->genomes[receiver], p->genomes[donor], start + frag_len - p->seq_len);
+    }
+    return exit_code;
+}
+
+int hgt_pop_transfer(hgt_pop *p, unsigned long frag_len, const gsl_rng *r) {
+    unsigned long donor, receiver, start;
+    donor = gsl_rng_uniform_int(r, p->size);
+    receiver = gsl_rng_uniform_int(r, p->size);
+    if (donor != receiver) {
+        start = gsl_rng_uniform_int(r, p->seq_len);
+        hgt_pop_transfer_at(p, donor, receiver, frag_len, start);
+    }
+
+    return EXIT_SUCCESS;
+}
+
+int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
+    unsigned long a, b;
+    a = gsl_rng_uniform_int(r, p->size);
+    b = gsl_rng_uniform_int(r, p->size);
+    if (a != b) {
+        strcpy(p->genomes[b], p->genomes[a]);
+    }
+    return EXIT_SUCCESS;
+}
+
+int hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r) {
+    int i, j, k;
+    if (p->cache_allocated == 0) {
+        p->survived = (unsigned long *) calloc(p->size, sizeof(unsigned long));
+        p->new_born = (unsigned long *) calloc(p->size, sizeof(unsigned long));
+        p->cache_allocated = 1;
+    } else {
+        for (i = 0; i < p->size; i++) {
+            p->survived[i] = 0;
+        }
+    }
+
+    k = 0;
+    for (i = 0; i < p->size; i ++) {
+        j = gsl_rng_uniform_int(r, p->size);
+        if (p->survived[j] == 1) {
+            p->new_born[k] = j;
+            k++;
+        } else {
+            p->survived[j] = 1;
+        }
+    }
+    
+    k = 0;
+    for (i = 0; i < p->size; i ++) {
+        if (p->survived[i] != 1) {
+            strcpy(p->genomes[i], p->genomes[p->new_born[k]]);
+            k++;
+        }
+    }
+
+    return EXIT_SUCCESS;
+
+}
+
+int hgt_pop_evolve(hgt_pop *p, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r) {
+    double mu;
+    unsigned long count, k;
+    sample_f(p, r);
+    mu = c_time_f(p->size, r) * (params->mu_rate + params->tr_rate) * (double) p->seq_len * (double) p->size;
+    count = gsl_ran_poisson(r, mu);
+    for (k = 0; k < count; k ++) {
+        if (gsl_rng_uniform(r) < params->mu_rate/(params->mu_rate + params->tr_rate)) {
+            hgt_pop_mutate(p, r);
+        } else {
+            hgt_pop_transfer(p, params->frag_len, r);
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+double hgt_pop_coal_time_moran(unsigned long p_size, const gsl_rng *r) {
+    return gsl_ran_exponential(r, 1.0 / (double) p_size);
+}
+
+double hgt_pop_coal_time_wf(unsigned long p_size, const gsl_rng *r) {
+    return gsl_ran_exponential(r, 1.0);
 }
 
 /******** PRIVATE FUNCTIONS ***********/
