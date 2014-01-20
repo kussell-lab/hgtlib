@@ -347,6 +347,106 @@ START_TEST (test_hgt_pop_evolve) {
 }
 END_TEST
 
+int evolve_and_calc_dist(hgt_pop_params *params, hgt_cov_sample_func f, int same_dist, const gsl_rng *r) {
+    int i, j, k;
+    
+    double ds1arr[params->seq_len][params->replicates];
+    double ds2arr[params->seq_len][params->replicates];
+    
+    // test moran model
+    params->generations = 10 * params->size * params->size;
+    
+    for (i = 0; i < params->replicates; i++) {
+        hgt_pop *p = hgt_pop_alloc(params->size, params->seq_len, r);
+        for (j = 0; j < params->generations; j++) {
+            hgt_pop_evolve(p, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, r);
+        }
+        double ds1[params->seq_len];
+        double ds2[params->seq_len];
+        hgt_pop_calc_dist(p, ds1, ds2, params->sample_size, f, r);
+        for (k = 0; k < params->seq_len; k++) {
+            if (same_dist != 0) {
+                ck_assert(fabs(ds1[k] - ds2[k]) < 1e-10);
+            }
+            ds1arr[k][i] = ds1[k];
+            ds2arr[k][i] = ds2[k];
+        }
+        hgt_pop_free(p);
+    }
+    
+    double expecting = (params->size * params->mu_rate) / (1.0 + params->tr_rate*params->frag_len + 4.0/3.0 * params->size * params->mu_rate);
+    
+    for (i = 0; i < params->seq_len; i++) {
+        double mean1, mean2, sd1, sd2;
+        mean1 = gsl_stats_mean(ds1arr[i], 1, params->replicates);
+        mean2 = gsl_stats_mean(ds2arr[i], 1, params->replicates);
+        sd1 = gsl_stats_sd(ds1arr[i], 1, params->replicates);
+        sd2 = gsl_stats_sd(ds2arr[i], 1, params->replicates);
+        ck_assert_msg(fabs(mean1 - expecting) < sd1/sqrt((double)params->replicates/(double)params->seq_len), "was expecting %g, but got %g, at %d, with standard error %g\n", expecting, mean1, i, sd1/sqrt((double)params->replicates));
+        ck_assert_msg(fabs(mean2 - expecting) < sd1/sqrt((double)params->replicates/(double)params->seq_len), "was expecting %g, but got %g, at %d, with standard error %g\n", expecting, mean2, i, sd2/sqrt((double)params->replicates));
+    }
+    
+    params->generations = 10 * params->size;
+    
+    for (i = 0; i < params->replicates; i++) {
+        hgt_pop *p = hgt_pop_alloc(params->size, params->seq_len, r);
+        for (j = 0; j < params->generations; j++) {
+            hgt_pop_evolve(p, params, hgt_pop_sample_wf, hgt_pop_coal_time_wf, r);
+        }
+        double ds1[params->seq_len];
+        double ds2[params->seq_len];
+        hgt_pop_calc_dist(p, ds1, ds2, params->sample_size, f, r);
+        for (k = 0; k < params->seq_len; k++) {
+            if (same_dist != 0) {
+                ck_assert(fabs(ds1[k] - ds2[k]) < 1e-10);
+            }
+            ds1arr[k][i] = ds1[k];
+            ds2arr[k][i] = ds2[k];
+        }
+        hgt_pop_free(p);
+    }
+    
+    expecting = (2 * params->size * params->mu_rate) / (1.0 + 2 * params->tr_rate*params->frag_len + 4.0/3.0 * 2 * params->size * params->mu_rate);
+    
+    for (i = 0; i < params->seq_len; i++) {
+        double mean1, mean2, sd1, sd2;
+        mean1 = gsl_stats_mean(ds1arr[i], 1, params->replicates);
+        mean2 = gsl_stats_mean(ds2arr[i], 1, params->replicates);
+        sd1 = gsl_stats_sd(ds1arr[i], 1, params->replicates);
+        sd2 = gsl_stats_sd(ds2arr[i], 1, params->replicates);
+        ck_assert_msg(fabs(mean1 - expecting) < sd1/sqrt((double)params->replicates/(double)params->seq_len), "was expecting %g, but got %g, at %d, with standard error %g\n", expecting, mean1, i, sd1/sqrt((double)params->replicates));
+        ck_assert_msg(fabs(mean2 - expecting) < sd1/sqrt((double)params->replicates/(double)params->seq_len), "was expecting %g, but got %g, at %d, with standard error %g\n", expecting, mean2, i, sd2/sqrt((double)params->replicates));
+    }
+    
+    return EXIT_SUCCESS;
+}
+
+START_TEST(test_hgt_pop_calc_dist)
+{
+    const gsl_rng *r = RNG;
+    unsigned long size, seq_len;
+    
+    size = 10;
+    seq_len = 10;
+    
+    hgt_pop_params *params = malloc(sizeof(hgt_pop_params));
+    params->size = size;
+    params->seq_len = seq_len;
+    params->frag_len = 0;
+    params->mu_rate = 0.01;
+    params->replicates = 100;
+    params->sample_size = 100;
+    params->tr_rate = 0;
+    
+    int evolve_and_calc_dist(hgt_pop_params *params, hgt_cov_sample_func f, int same_dist, const gsl_rng *r);
+    
+    evolve_and_calc_dist(params, hgt_cov_sample_p2, 1, r);
+    evolve_and_calc_dist(params, hgt_cov_sample_p3, 0, r);
+    evolve_and_calc_dist(params, hgt_cov_sample_p4, 0, r);
+    
+}
+END_TEST
+
 Suite *
 hgt_pop_suite (void)
 {
@@ -370,6 +470,11 @@ hgt_pop_suite (void)
     tcase_set_timeout(tc_evl, 100);
     tcase_add_test(tc_evl, test_hgt_pop_evolve);
     suite_add_tcase(s, tc_evl);
+    
+    TCase *tc_calc = tcase_create("Calculation");
+    tcase_set_timeout(tc_calc, 100);
+    tcase_add_test(tc_calc, test_hgt_pop_calc_dist);
+    suite_add_tcase(s, tc_calc);
 
     return s;
 }

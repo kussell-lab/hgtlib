@@ -13,6 +13,7 @@
 #include <gsl/gsl_randist.h>
 #include <argtable2.h>
 #include "hgt_pop.h"
+#include "hgt_cov.h"
 
 const char DNA[5] = "ATGC\0";
 const int NUM_DNA_CHAR = 4;
@@ -302,6 +303,34 @@ double hgt_pop_calc_ks(hgt_pop *p) {
     ks /= (double) (p->size * (p->size - 1)/2 * p->seq_len);
     
     return ks;
+}
+
+int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample_size, hgt_cov_sample_func sample_func, const gsl_rng *r) {
+    int i, j;
+    unsigned long a, b, c, d;
+    for (i = 0; i < p->seq_len; i++) {
+        ds1[i] = 0;
+        ds2[i] = 0;
+    }
+    
+    for (i = 0; i < sample_size; i++) {
+        sample_func(&a, &b, &c, &d, p->size, r);
+        for (j = 0; j < p->seq_len; j++) {
+            if (p->genomes[a][j] != p->genomes[b][j]) {
+                ds1[j]++;
+            }
+            if (p->genomes[c][j] != p->genomes[d][j]) {
+                ds2[j]++;
+            }
+        }
+    }
+    
+    for (i = 0; i < p->seq_len; i++) {
+        ds1[i] /= (double) sample_size;
+        ds2[i] /= (double) sample_size;
+    }
+    
+    return EXIT_SUCCESS;
 }
 
 /******** PRIVATE FUNCTIONS ***********/

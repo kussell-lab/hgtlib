@@ -6,6 +6,8 @@
 //
 //
 
+#include "hgt_cov.h"
+
 #ifndef hgt_hgt_pop_h
 #define hgt_hgt_pop_h
 
@@ -74,4 +76,5 @@ int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * p
 int hgt_pop_params_free(hgt_pop_params *params);
 
 double hgt_pop_calc_ks(hgt_pop *p);
+int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample_size, hgt_cov_sample_func sample_func, const gsl_rng *r);
 #endif
