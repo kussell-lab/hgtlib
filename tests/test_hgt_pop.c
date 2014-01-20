@@ -203,7 +203,6 @@ START_TEST (test_hgt_pop_mutate)
     hgt_pop * p;
     int n, i;
     unsigned long g, s;
-    char c;
     int count[4];
     
     const gsl_rng *r = RNG;
@@ -278,7 +277,7 @@ START_TEST (test_hgt_pop_transfer_at)
 }
 END_TEST
 
-int evolve_and_calc_ks(double * ks, hgt_pop *p, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r) {
+int evolve_and_calc_ks(double * ks, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r) {
     int i, j, k, m;
     double sum;
     for (m = 0; m < params->replicates; m++) {
@@ -308,13 +307,12 @@ int evolve_and_calc_ks(double * ks, hgt_pop *p, hgt_pop_params *params, hgt_pop_
 }
 
 START_TEST (test_hgt_pop_evolve) {
-    int evolve_and_calc_ks(double * ks, hgt_pop *p, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r);
+    int evolve_and_calc_ks(double * ks, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r);
     const gsl_rng *r = RNG;
     unsigned long size, seq_len;
 
     size = 10;
     seq_len = 100;
-    hgt_pop *p;
 
     hgt_pop_params *params = malloc(sizeof(hgt_pop_params));
     params->size = size;
@@ -330,14 +328,14 @@ START_TEST (test_hgt_pop_evolve) {
     params->tr_rate = 0;
 
     params->generations = 1000;
-    evolve_and_calc_ks(ks, p, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, r);
+    evolve_and_calc_ks(ks, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, r);
     expect = (size * params->mu_rate) / (1.0 + 4.0/3.0 * size * params->mu_rate);
     mean = gsl_stats_mean(ks, 1, params->replicates);
     sd = gsl_stats_sd(ks, 1, params->replicates)/sqrt(params->size);
     ck_assert_msg(fabs(mean - expect) < sd, "was expecting %g, but got %g, and the standard deviation is %g\n", expect, mean, sd);
     
     params->generations = 100;
-    evolve_and_calc_ks(ks, p, params, hgt_pop_sample_wf, hgt_pop_coal_time_wf, r);
+    evolve_and_calc_ks(ks, params, hgt_pop_sample_wf, hgt_pop_coal_time_wf, r);
     expect = (2 * size * params->mu_rate) / (1.0 + 4.0/3.0 * 2 * size * params->mu_rate);
     mean = gsl_stats_mean(ks, 1, params->replicates);
     sd = gsl_stats_sd(ks, 1, params->replicates)/sqrt(params->size);
@@ -347,14 +345,14 @@ START_TEST (test_hgt_pop_evolve) {
     params->tr_rate = 0.1;
 
     params->generations = 1000;
-    evolve_and_calc_ks(ks, p, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, r);
+    evolve_and_calc_ks(ks, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, r);
     expect = (size * params->mu_rate) / (1.0 + params->tr_rate * params->frag_len + 4.0/3.0 * size * params->mu_rate);
     mean = gsl_stats_mean(ks, 1, params->replicates);
     sd = gsl_stats_sd(ks, 1, params->replicates)/sqrt(params->size);
     ck_assert_msg(fabs(mean - expect) < sd, "was expecting %g, but got %g, and the standard deviation is %g\n", expect, mean, sd);
     
     params->generations = 100;
-    evolve_and_calc_ks(ks, p, params, hgt_pop_sample_wf, hgt_pop_coal_time_wf, r);
+    evolve_and_calc_ks(ks, params, hgt_pop_sample_wf, hgt_pop_coal_time_wf, r);
     expect = (2 * size * params->mu_rate) / (1.0 + 2 * params->tr_rate * params->frag_len + 4.0/3.0 * 2 * size * params->mu_rate);
     mean = gsl_stats_mean(ks, 1, params->replicates);
     sd = gsl_stats_sd(ks, 1, params->replicates)/sqrt(params->size);
