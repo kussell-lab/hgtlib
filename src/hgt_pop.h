@@ -72,4 +72,6 @@ int hgt_pop_evolve(hgt_pop *p,
 
 int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * progname);
 int hgt_pop_params_free(hgt_pop_params *params);
+
+double hgt_pop_calc_ks(hgt_pop *p);
 #endif

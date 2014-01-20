@@ -278,28 +278,14 @@ START_TEST (test_hgt_pop_transfer_at)
 END_TEST
 
 int evolve_and_calc_ks(double * ks, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r) {
-    int i, j, k, m;
-    double sum;
+    int i, m;
     for (m = 0; m < params->replicates; m++) {
-        sum = 0;
         hgt_pop *p = hgt_pop_alloc(params->size, params->seq_len, r);
         for (i = 0; i < params->generations; i++) {
             hgt_pop_evolve(p, params, sample_f, c_time_f, r);
         }
         
-        for (i = 0; i < p->size; i++) {
-            for (j = 0; j < p->size; j++){
-                    if (i != j){
-                        for (k = 0; k < p->seq_len; k++) {
-                        if (p->genomes[i][k] != p->genomes[j][k]) {
-                            sum++;
-                        }
-                    }
-                }
-                
-            }
-        }
-        ks[m] = sum / (double) (p->size * (p->size - 1) * p->seq_len);
+        ks[m] = hgt_pop_calc_ks(p);
         hgt_pop_free(p);
     }
 

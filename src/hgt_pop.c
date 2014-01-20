@@ -284,6 +284,26 @@ double hgt_pop_coal_time_wf(unsigned long p_size, const gsl_rng *r) {
     return gsl_ran_exponential(r, 1.0);
 }
 
+double hgt_pop_calc_ks(hgt_pop *p) {
+    double ks;
+    int i, j, k;
+    ks = 0;
+    
+    for (i = 0; i < p->size; i++) {
+        for (j = i + 1; j < p->size; j++) {
+            for (k = 0; k < p->seq_len; k++) {
+                if (p->genomes[i][k] != p->genomes[j][k]) {
+                    ks++;
+                }
+            }
+        }
+    }
+    
+    ks /= (double) (p->size * (p->size - 1)/2 * p->seq_len);
+    
+    return ks;
+}
+
 /******** PRIVATE FUNCTIONS ***********/
 int random_seq(char * seq, unsigned long seq_len, const gsl_rng * r) {
     int i;
