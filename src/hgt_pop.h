@@ -79,6 +79,6 @@ double hgt_pop_calc_ks(hgt_pop *p);
 int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample_size, hgt_cov_sample_func sample_func, const gsl_rng *r);
 
 typedef int(*hgt_pop_calc_pxy_func)(double **pxy, unsigned long maxl, double *d1, double *d2, unsigned long len);
-int hgt_pop_calc_pxy(double **pxy, unsigned long maxl, double *d1, double *d2, unsigned long len);
-int hgt_pop_calc_pxy_fft(double **pxy, unsigned long maxl, double *d1, double *d2, unsigned long len);
+int hgt_pop_calc_pxy(double **pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
+int hgt_pop_calc_pxy_fft(double **pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
 #endif

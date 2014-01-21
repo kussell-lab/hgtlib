@@ -451,53 +451,75 @@ START_TEST(test_hgt_pop_calc_pxy)
 {
     const gsl_rng *r = RNG;
     unsigned long len = 16;
-    unsigned long maxl;
-    double d1[len];
-    double d2[len];
+    unsigned long maxl = 16;
+    double d1[len], d2[len];
+    double **pxy1, **pxy2;
+    
     int i, j;
     for (i = 0; i < len; i++) {
         d1[i] = gsl_rng_uniform(r);
         d2[i] = gsl_rng_uniform(r);
     }
-    
-    maxl = len;
-    double **pxy1, **pxy2;
     pxy1 = malloc(maxl*sizeof(double*));
     pxy2 = malloc(maxl*sizeof(double*));
     for (i = 0; i < maxl; i++) {
         pxy1[i] = malloc(4*sizeof(double));
         pxy2[i] = malloc(4*sizeof(double));
     }
-    hgt_pop_calc_pxy(pxy1, maxl, d1, d2, len);
-    hgt_pop_calc_pxy_fft(pxy2, maxl, d1, d2, len);
     
+    // test circular cross corrlation with power2 length;
+    len = 16;
+    maxl = len;
+    hgt_pop_calc_pxy(pxy1, maxl, d1, d2, len, 1);
+    hgt_pop_calc_pxy_fft(pxy2, maxl, d1, d2, len, 1);
     for (i = 0; i < maxl; i++) {
         for (j = 0; j < 4; j++) {
             ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
         }
     }
     
+    // test cirular cross correlation with a non power2 length;
     len = 10;
-    for (i = 0; i < len; i++) {
-        d1[i] = gsl_rng_uniform(r);
-        d2[i] = gsl_rng_uniform(r);
-    }
-    
     maxl = len;
-    pxy1 = malloc(maxl*sizeof(double*));
-    pxy2 = malloc(maxl*sizeof(double*));
-    for (i = 0; i < maxl; i++) {
-        pxy1[i] = malloc(4*sizeof(double));
-        pxy2[i] = malloc(4*sizeof(double));
-    }
-    hgt_pop_calc_pxy(pxy1, maxl, d1, d2, len);
-    hgt_pop_calc_pxy_fft(pxy2, maxl, d1, d2, len);
+    hgt_pop_calc_pxy(pxy1, maxl, d1, d2, len, 1);
+    hgt_pop_calc_pxy_fft(pxy2, maxl, d1, d2, len, 1);
     
     for (i = 0; i < maxl; i++) {
         for (j = 0; j < 4; j++) {
             ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
         }
     }
+    
+    // test non ciruclar cross correlation with a power2 length;
+    len = 16;
+    maxl = len;
+    hgt_pop_calc_pxy(pxy1, maxl, d1, d2, len, 0);
+    hgt_pop_calc_pxy_fft(pxy2, maxl, d1, d2, len, 0);
+    
+    for (i = 0; i < maxl; i++) {
+        for (j = 0; j < 4; j++) {
+            ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
+        }
+    }
+    
+    // test non circular cross correlation with a non power2 length;
+    len = 10;
+    maxl = len;
+    hgt_pop_calc_pxy(pxy1, maxl, d1, d2, len, 0);
+    hgt_pop_calc_pxy_fft(pxy2, maxl, d1, d2, len, 0);
+    
+    for (i = 0; i < maxl; i++) {
+        for (j = 0; j < 4; j++) {
+            ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
+        }
+    }
+    
+    for (i = 0; i < 16; i++) {
+        free(pxy1[i]);
+        free(pxy2[i]);
+    }
+    free(pxy1);
+    free(pxy2);
 }
 END_TEST
 
