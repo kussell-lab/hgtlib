@@ -370,32 +370,35 @@ int hgt_pop_calc_pxy_fft(double **pxy, unsigned long maxl, double *d1, double *d
     unsigned long fft_len;
     int i, j, l;
     fft_len = (unsigned long) pow(2, (int)(log(len)/log(2))+1);
+    if (fft_len % len == 0) {
+        fft_len = len;
+    }
     
-//    printf("fft_len = %lu\n", fft_len);
+//    printf("fft_len = %lu, len = %lu\n", fft_len, len);
     
     double ds1[2][2*fft_len];
     double ds2[2][2*fft_len];
     for (i = 0; i < 2*fft_len; i++) {
-        if (i < len) {
-            ds1[1][i] = d1[i];
-            ds2[1][i] = d2[i];
-            ds1[0][i] = 1.0 - ds1[1][i];
-            ds2[0][i] = 1.0 - ds2[1][i];
-        } else {
+        if (i < 2*len) {
             ds1[1][i] = d1[i%len];
             ds2[1][i] = d2[i%len];
             ds1[0][i] = 1.0 - ds1[1][i];
             ds2[0][i] = 1.0 - ds2[1][i];
+        } else {
+            ds1[1][i] = 0;
+            ds2[1][i] = 0;
+            ds1[0][i] = 0;
+            ds2[0][i] = 0;
         }
         
     }
     
     double mask[2*fft_len];
     for (i = 0; i < 2*fft_len; i++) {
-        if (i < len) {
+        if (i < 2*len) {
             mask[i] = 1.0;
         } else {
-            mask[i] = 1.0;
+            mask[i] = 0;
         }
     }
     hgt_corr_auto_fft(mask, fft_len);
@@ -411,8 +414,9 @@ int hgt_pop_calc_pxy_fft(double **pxy, unsigned long maxl, double *d1, double *d
             hgt_corr_fft(buf1, buf2, fft_len);
             for (l = 0; l < maxl; l++) {
 //                printf("%d, %g, %g, %g, %g\n", l, buf1[l], mask[l], buf1[2*fft_len-l], mask[2*fft_len - l]);
-                pxy[l][2*i+j] = buf1[l] / mask[l];
+                pxy[l][2*i+j] = (buf1[l] + buf1[2*fft_len-len+l]) / (mask[l]+mask[2*fft_len-len+l]);
             }
+            pxy[0][2*i+j] = buf1[0] / mask[0];
         }
     }
     

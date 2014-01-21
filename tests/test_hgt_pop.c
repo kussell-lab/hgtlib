@@ -473,7 +473,29 @@ START_TEST(test_hgt_pop_calc_pxy)
     
     for (i = 0; i < maxl; i++) {
         for (j = 0; j < 4; j++) {
-            ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at i %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
+            ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
+        }
+    }
+    
+    len = 10;
+    for (i = 0; i < len; i++) {
+        d1[i] = gsl_rng_uniform(r);
+        d2[i] = gsl_rng_uniform(r);
+    }
+    
+    maxl = len;
+    pxy1 = malloc(maxl*sizeof(double*));
+    pxy2 = malloc(maxl*sizeof(double*));
+    for (i = 0; i < maxl; i++) {
+        pxy1[i] = malloc(4*sizeof(double));
+        pxy2[i] = malloc(4*sizeof(double));
+    }
+    hgt_pop_calc_pxy(pxy1, maxl, d1, d2, len);
+    hgt_pop_calc_pxy_fft(pxy2, maxl, d1, d2, len);
+    
+    for (i = 0; i < maxl; i++) {
+        for (j = 0; j < 4; j++) {
+            ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
         }
     }
 }
