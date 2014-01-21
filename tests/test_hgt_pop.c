@@ -13,6 +13,7 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_statistics.h>
 #include "hgt_pop.h"
+#include "hgt_predict.h"
 
 hgt_pop *SMALL_P;
 const gsl_rng *RNG;
@@ -374,7 +375,7 @@ int evolve_and_calc_dist(hgt_pop_params *params, hgt_cov_sample_func f, int same
         hgt_pop_free(p);
     }
     
-    double expecting = (params->size * params->mu_rate) / (1.0 + params->tr_rate*params->frag_len + 4.0/3.0 * params->size * params->mu_rate);
+    double expecting = hgt_predict_ks_moran(params->size, params->mu_rate, params->tr_rate, params->frag_len);
     
     for (i = 0; i < params->seq_len; i++) {
         double mean1, mean2, sd1, sd2;
@@ -406,7 +407,7 @@ int evolve_and_calc_dist(hgt_pop_params *params, hgt_cov_sample_func f, int same
         hgt_pop_free(p);
     }
     
-    expecting = (2 * params->size * params->mu_rate) / (1.0 + 2 * params->tr_rate*params->frag_len + 4.0/3.0 * 2 * params->size * params->mu_rate);
+    expecting = hgt_predict_ks_wf(params->size, params->mu_rate, params->tr_rate, params->frag_len);
     
     for (i = 0; i < params->seq_len; i++) {
         double mean1, mean2, sd1, sd2;
@@ -523,6 +524,56 @@ START_TEST(test_hgt_pop_calc_pxy)
 }
 END_TEST
 
+int evolve_and_calc_pxy(hgt_pop_params *params, hgt_cov_sample_func f, const gsl_rng *r) {
+    int i, j, circular;
+    double d1[params->seq_len], d2[params->seq_len];
+    double **pxy;
+    pxy = malloc(params->maxl*sizeof(double*));
+    for (i = 0; i < params->maxl; i++) {
+        pxy[i] = malloc(4*sizeof(double));
+    }
+    
+    circular = 1;
+    double ks_arr[params->replicates*params->sample_size];
+    for (i = 0; i < params->replicates; i++) {
+        hgt_pop *p = hgt_pop_alloc(params->size, params->seq_len, r);
+        for (j = 0; j < params->generations; j++) {
+            hgt_pop_evolve(p, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, r);
+        }
+        for (j = 0; j < params->sample_size; j++) {
+            hgt_pop_calc_dist(p, d1, d2, 1, f, r);
+            hgt_pop_calc_pxy_fft(pxy, params->maxl, d1, d2, params->seq_len, circular);
+            ks_arr[i*params->sample_size+j] = pxy[0][3];
+        }
+        hgt_pop_free(p);
+    }
+    
+    double ks_mean = gsl_stats_mean(ks_arr, 1, params->replicates);
+    double ks_sd = gsl_stats_sd(ks_arr, 1, params->replicates);
+    double expecting = hgt_predict_ks_moran(params->size, params->mu_rate, params->tr_rate, params->frag_len);
+    double sderr = ks_sd/sqrt((double)params->replicates);
+    ck_assert_msg(fabs(ks_mean - expecting) < sderr, "expcting ks to be %g, but got %g, with stderr = %g", expecting, ks_mean, sderr);
+    return EXIT_SUCCESS;
+}
+
+START_TEST(test_hgt_pop_calc_pxy_p)
+{
+    hgt_pop_params *params = malloc(sizeof(hgt_pop_params));
+    params->size = 10;
+    params->seq_len = 100;
+    params->frag_len = 10;
+    params->mu_rate = 0.01;
+    params->replicates = 100;
+    params->sample_size = 100;
+    params->tr_rate = 0.0;
+    params->generations = 10*params->size*params->size;
+    params->maxl = params->size;
+    
+    int evolve_and_calc_pxy(hgt_pop_params *params, hgt_cov_sample_func f, const gsl_rng *r);
+    evolve_and_calc_pxy(params, hgt_cov_sample_p2, RNG);
+}
+END_TEST
+
 Suite *
 hgt_pop_suite (void)
 {
@@ -551,6 +602,7 @@ hgt_pop_suite (void)
     tcase_set_timeout(tc_calc, 100);
     tcase_add_test(tc_calc, test_hgt_pop_calc_dist);
     tcase_add_test(tc_calc, test_hgt_pop_calc_pxy);
+    tcase_add_test(tc_calc, test_hgt_pop_calc_pxy_p);
     suite_add_tcase(s, tc_calc);
 
     return s;
