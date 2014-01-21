@@ -53,3 +53,25 @@ int hgt_corr_brute_force(double *f, double *g, unsigned long len)
 	free(s);
 	return EXIT_SUCCESS;
 }
+
+int hgt_corr_auto_fft(double *f, unsigned long len){
+    unsigned long k, ft_len;
+	double a, b, c, d;
+    
+	ft_len = 2 * len;
+	gsl_fft_real_radix2_transform(f, 1, ft_len);
+    
+    for (k = 1; k < len; k++) {
+        a = f[k];
+        b = f[ft_len - k];
+        c = f[k];
+        d = f[ft_len - k];
+        f[k] = (a * c + b * d);
+        f[ft_len - k] = 0;
+    }
+    
+    f[0] = f[0]*f[0];
+	f[len] = f[len]*f[len];
+	gsl_fft_halfcomplex_radix2_inverse(f, 1, ft_len);
+    return EXIT_SUCCESS;
+}

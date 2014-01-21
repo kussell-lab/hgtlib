@@ -12,8 +12,10 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 #include <argtable2.h>
+#include <math.h>
 #include "hgt_pop.h"
 #include "hgt_cov.h"
+#include "hgt_corr.h"
 
 const char DNA[5] = "ATGC\0";
 const int NUM_DNA_CHAR = 4;
@@ -328,6 +330,90 @@ int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample
     for (i = 0; i < p->seq_len; i++) {
         ds1[i] /= (double) sample_size;
         ds2[i] /= (double) sample_size;
+    }
+    
+    return EXIT_SUCCESS;
+}
+
+int hgt_pop_calc_pxy(double **pxy, unsigned long maxl, double *ds1, double *ds2, unsigned long len) {
+    int i, l;
+    for (l = 0; l < maxl; l++) {
+        for (i = 0; i < 4; i++) {
+            pxy[l][i] = 0;
+        }
+    }
+    
+    int a, b;
+    for (l = 0; l < maxl; l++) {
+        for (i = 0; i < len; i++) {
+            a = i;
+            b = (i-l+len) % len;
+            pxy[l][3] += ds1[a] * ds2[b];
+//            pxy[l][3] += ds2[a] * ds1[b];
+            pxy[l][2] += ds1[a] * (1-ds2[b]);
+//            pxy[l][2] += ds2[a] * (1-ds1[b]);
+            pxy[l][1] += (1-ds1[a]) * ds2[b];
+//            pxy[l][1] += (1-ds2[a]) * ds1[b];
+            pxy[l][0] += (1-ds1[a]) * (1-ds2[b]);
+//            pxy[l][0] += (1-ds2[a]) * (1-ds1[b]);
+        }
+        pxy[l][3] /= (double) len;
+        pxy[l][2] /= (double) len;
+        pxy[l][1] /= (double) len;
+        pxy[l][0] /= (double) len;
+    }
+    
+    return EXIT_SUCCESS;
+}
+
+int hgt_pop_calc_pxy_fft(double **pxy, unsigned long maxl, double *d1, double *d2, unsigned long len) {
+    unsigned long fft_len;
+    int i, j, l;
+    fft_len = (unsigned long) pow(2, (int)(log(len)/log(2))+1);
+    
+//    printf("fft_len = %lu\n", fft_len);
+    
+    double ds1[2][2*fft_len];
+    double ds2[2][2*fft_len];
+    for (i = 0; i < 2*fft_len; i++) {
+        if (i < len) {
+            ds1[1][i] = d1[i];
+            ds2[1][i] = d2[i];
+            ds1[0][i] = 1.0 - ds1[1][i];
+            ds2[0][i] = 1.0 - ds2[1][i];
+        } else {
+            ds1[1][i] = d1[i%len];
+            ds2[1][i] = d2[i%len];
+            ds1[0][i] = 1.0 - ds1[1][i];
+            ds2[0][i] = 1.0 - ds2[1][i];
+        }
+        
+    }
+    
+    double mask[2*fft_len];
+    for (i = 0; i < 2*fft_len; i++) {
+        if (i < len) {
+            mask[i] = 1.0;
+        } else {
+            mask[i] = 1.0;
+        }
+    }
+    hgt_corr_auto_fft(mask, fft_len);
+    
+    double buf1[2*fft_len];
+    double buf2[2*fft_len];
+    for (i = 0; i < 2; i++) {
+        for (j = 0; j < 2; j++) {
+            for (l = 0; l < 2*fft_len; l++) {
+                buf1[l] = ds1[i][l];
+                buf2[l] = ds2[j][l];
+            }
+            hgt_corr_fft(buf1, buf2, fft_len);
+            for (l = 0; l < maxl; l++) {
+//                printf("%d, %g, %g, %g, %g\n", l, buf1[l], mask[l], buf1[2*fft_len-l], mask[2*fft_len - l]);
+                pxy[l][2*i+j] = buf1[l] / mask[l];
+            }
+        }
     }
     
     return EXIT_SUCCESS;

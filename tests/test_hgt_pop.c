@@ -447,6 +447,38 @@ START_TEST(test_hgt_pop_calc_dist)
 }
 END_TEST
 
+START_TEST(test_hgt_pop_calc_pxy)
+{
+    const gsl_rng *r = RNG;
+    unsigned long len = 16;
+    unsigned long maxl;
+    double d1[len];
+    double d2[len];
+    int i, j;
+    for (i = 0; i < len; i++) {
+        d1[i] = gsl_rng_uniform(r);
+        d2[i] = gsl_rng_uniform(r);
+    }
+    
+    maxl = len;
+    double **pxy1, **pxy2;
+    pxy1 = malloc(maxl*sizeof(double*));
+    pxy2 = malloc(maxl*sizeof(double*));
+    for (i = 0; i < maxl; i++) {
+        pxy1[i] = malloc(4*sizeof(double));
+        pxy2[i] = malloc(4*sizeof(double));
+    }
+    hgt_pop_calc_pxy(pxy1, maxl, d1, d2, len);
+    hgt_pop_calc_pxy_fft(pxy2, maxl, d1, d2, len);
+    
+    for (i = 0; i < maxl; i++) {
+        for (j = 0; j < 4; j++) {
+            ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at i %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
+        }
+    }
+}
+END_TEST
+
 Suite *
 hgt_pop_suite (void)
 {
@@ -474,6 +506,7 @@ hgt_pop_suite (void)
     TCase *tc_calc = tcase_create("Calculation");
     tcase_set_timeout(tc_calc, 100);
     tcase_add_test(tc_calc, test_hgt_pop_calc_dist);
+    tcase_add_test(tc_calc, test_hgt_pop_calc_pxy);
     suite_add_tcase(s, tc_calc);
 
     return s;
