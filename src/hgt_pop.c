@@ -93,11 +93,13 @@ int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * p
     struct arg_int *spl_size = arg_int0("s", "sample_size", "<unsigned long>", "sample size");
     struct arg_int *spl_time = arg_int0("i", "sample_time", "<unsigned long>", "sample time");
     struct arg_int *repl = arg_int0("r", "replication", "<unsigned long>", "replication");
+    
+    struct arg_file *prefix = arg_file1("o", "output", "<output>", "prefix");
 
     struct arg_lit  *help    = arg_lit0(NULL,"help", "print this help and exit");
     struct arg_end  *end     = arg_end(20);
 
-    void* argtable[] = {size, seq_len, frag_len, mu_rate, tr_rate, gen, spl_time, spl_size, repl, help, end};
+    void* argtable[] = {size, seq_len, frag_len, mu_rate, tr_rate, gen, spl_time, spl_size, repl, prefix, help, end};
     int nerrors;
     int exit_code = EXIT_SUCCESS;
     /* verify the argtable[] entries were allocated sucessfully */
@@ -138,6 +140,7 @@ int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * p
     params->mu_rate = mu_rate->dval[0];
     params->tr_rate = tr_rate->dval[0];
     params->generations = gen->ival[0];
+    params->prefix = (char *) prefix->filename[0];
 
     if (spl_time->count > 0)
     {
@@ -161,6 +164,25 @@ int hgt_pop_params_free(hgt_pop_params *params){
     free(params);
 
     return EXIT_SUCCESS;
+}
+
+int hgt_pop_params_printf(hgt_pop_params *params, FILE *stream) {
+    fprintf(stream, "population size = %lu\n", params->size);
+    fprintf(stream, "genome length = %lu\n", params->seq_len);
+    fprintf(stream, "mutation rate = %g\n", params->mu_rate);
+    fprintf(stream, "transfer rate = %g\n", params->tr_rate);
+    fprintf(stream, "transfer frag = %lu\n", params->frag_len);
+    fprintf(stream, "generations = %lu\n", params->generations);
+    fprintf(stream, "sample size = %lu\n", params->sample_size);
+    fprintf(stream, "sample time = %lu\n", params->sample_time);
+    fprintf(stream, "replicates = %lu\n", params->replicates);
+    fprintf(stream, "prefix = %s\n", params->prefix);
+    return EXIT_SUCCESS;
+}
+
+hgt_pop_params *hgt_pop_params_alloc() {
+    hgt_pop_params *params = calloc(1, sizeof(hgt_pop_params));
+    return params;
 }
 
 int hgt_pop_mutate_at(hgt_pop *p, unsigned long g, unsigned long s, const gsl_rng *r) {

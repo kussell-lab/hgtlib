@@ -100,9 +100,10 @@ START_TEST (test_hgt_pop_params_parse)
                     "-u", "1e-3", 
                     "-t", "1e-4", 
                     "-f", "50",
-                    "-g", "10000"
+                    "-g", "10000",
+                    "-o", "test"
                 };
-    argc = 13;
+    argc = 15;
     hgt_pop_params * params = malloc(sizeof(hgt_pop_params));
     exit_code = hgt_pop_params_parse(params, argc, argv1, "test_hgt_pop_params_parse");
     
@@ -121,9 +122,10 @@ START_TEST (test_hgt_pop_params_parse)
                     "-g", "10000",
                     "-s", "1000",
                     "-i", "222",
-                    "-r", "55"
+                    "-r", "55",
+                    "-o", "test"
                 };
-    argc = 19;
+    argc = 21;
     hgt_pop_params_parse(params, argc, argv2, "test_hgt_pop_params_parse");
     ck_assert(exit_code == EXIT_SUCCESS);
     ck_assert(params->generations == 10000);

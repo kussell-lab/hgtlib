@@ -9,6 +9,8 @@
 #ifndef hgt_hgt_cov_h
 #define hgt_hgt_cov_h
 
+#include <gsl/gsl_rng.h>
+
 typedef int(*hgt_cov_sample_func)(unsigned long *a, unsigned long *b, unsigned long *c, unsigned long *d, unsigned long p_size, const gsl_rng *r);
 int hgt_cov_sample_p2(unsigned long *a, unsigned long *b, unsigned long *c, unsigned long *d, unsigned long p_size, const gsl_rng *r);
 int hgt_cov_sample_p3(unsigned long *a, unsigned long *b, unsigned long *c, unsigned long *d, unsigned long p_size, const gsl_rng *r);
