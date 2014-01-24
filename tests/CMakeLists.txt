@@ -18,3 +18,7 @@ add_test(test_hgt_pop ${CMAKE_CURRENT_BINARY_DIR}/test_hgt_pop)
 add_executable(test_hgt_cov test_hgt_cov.c)
 target_link_libraries(test_hgt_cov ${LIBS})
 add_test(test_hgt_cov ${CMAKE_CURRENT_BINARY_DIR}/test_hgt_cov)
+
+add_executable(test_hgt_stat test_hgt_stat.c)
+target_link_libraries(test_hgt_stat ${LIBS})
+add_test(test_hgt_stat ${CMAKE_CURRENT_BINARY_DIR}/test_hgt_stat)
