@@ -456,19 +456,16 @@ START_TEST(test_hgt_pop_calc_pxy)
     unsigned long len = 16;
     unsigned long maxl = 16;
     double d1[len], d2[len];
-    double **pxy1, **pxy2;
+    double *pxy1, *pxy2;
     
-    int i, j;
+    int i, j, dim;
+    dim = 4;
     for (i = 0; i < len; i++) {
         d1[i] = gsl_rng_uniform(r);
         d2[i] = gsl_rng_uniform(r);
     }
-    pxy1 = malloc(maxl*sizeof(double*));
-    pxy2 = malloc(maxl*sizeof(double*));
-    for (i = 0; i < maxl; i++) {
-        pxy1[i] = malloc(4*sizeof(double));
-        pxy2[i] = malloc(4*sizeof(double));
-    }
+    pxy1 = malloc(maxl*dim*sizeof(double*));
+    pxy2 = malloc(maxl*dim*sizeof(double*));
     
     // test circular cross corrlation with power2 length;
     len = 16;
@@ -477,7 +474,7 @@ START_TEST(test_hgt_pop_calc_pxy)
     hgt_pop_calc_pxy_fft(pxy2, maxl, d1, d2, len, 1);
     for (i = 0; i < maxl; i++) {
         for (j = 0; j < 4; j++) {
-            ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
+            ck_assert_msg(fabs(pxy1[i*dim+j] - pxy2[i*dim+j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i*dim+j], pxy2[i*dim+j], i, j);
         }
     }
     
@@ -489,7 +486,7 @@ START_TEST(test_hgt_pop_calc_pxy)
     
     for (i = 0; i < maxl; i++) {
         for (j = 0; j < 4; j++) {
-            ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
+            ck_assert_msg(fabs(pxy1[i*dim+j] - pxy2[i*dim+j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i*dim+j], pxy2[i*dim+j], i, j);
         }
     }
     
@@ -501,7 +498,7 @@ START_TEST(test_hgt_pop_calc_pxy)
     
     for (i = 0; i < maxl; i++) {
         for (j = 0; j < 4; j++) {
-            ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
+            ck_assert_msg(fabs(pxy1[i*dim+j] - pxy2[i*dim+j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i*dim+j], pxy2[i*dim+j], i, j);
         }
     }
     
@@ -513,14 +510,10 @@ START_TEST(test_hgt_pop_calc_pxy)
     
     for (i = 0; i < maxl; i++) {
         for (j = 0; j < 4; j++) {
-            ck_assert_msg(fabs(pxy1[i][j] - pxy2[i][j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i][j], pxy2[i][j], i, j);
+            ck_assert_msg(fabs(pxy1[i*dim+j] - pxy2[i*dim+j]) < 1e-10, "normal value %g, fft value %g, at l %d, j %d", pxy1[i*dim+j], pxy2[i*dim+j], i, j);
         }
     }
     
-    for (i = 0; i < 16; i++) {
-        free(pxy1[i]);
-        free(pxy2[i]);
-    }
     free(pxy1);
     free(pxy2);
 }
@@ -529,14 +522,12 @@ END_TEST
 int evolve_and_calc_pxy(hgt_pop_params *params, hgt_cov_sample_func f, const gsl_rng *r) {
     int i, j, circular;
     double d1[params->seq_len], d2[params->seq_len];
-    double **pxy;
-    pxy = malloc(params->maxl*sizeof(double*));
-    for (i = 0; i < params->maxl; i++) {
-        pxy[i] = malloc(4*sizeof(double));
-    }
+    double *pxy;
+    pxy = malloc(params->maxl*4*sizeof(double*));
     
     circular = 1;
-    double ks_arr[params->replicates*params->sample_size];
+    double ks_arr[params->sample_size];
+    double ks_mean_arr[params->replicates];
     for (i = 0; i < params->replicates; i++) {
         hgt_pop *p = hgt_pop_alloc(params->size, params->seq_len, r);
         for (j = 0; j < params->generations; j++) {
@@ -545,16 +536,18 @@ int evolve_and_calc_pxy(hgt_pop_params *params, hgt_cov_sample_func f, const gsl
         for (j = 0; j < params->sample_size; j++) {
             hgt_pop_calc_dist(p, d1, d2, 1, f, r);
             hgt_pop_calc_pxy_fft(pxy, params->maxl, d1, d2, params->seq_len, circular);
-            ks_arr[i*params->sample_size+j] = pxy[0][3];
+            ks_arr[j] = pxy[3];
         }
+        ks_mean_arr[i] = gsl_stats_mean(ks_arr, 1, params->sample_size);
         hgt_pop_free(p);
     }
     
-    double ks_mean = gsl_stats_mean(ks_arr, 1, params->replicates);
-    double ks_sd = gsl_stats_sd(ks_arr, 1, params->replicates);
+    double ks_mean = gsl_stats_mean(ks_mean_arr, 1, params->replicates);
+    double ks_sd = gsl_stats_sd(ks_mean_arr, 1, params->replicates);
     double expecting = hgt_predict_ks_moran(params->size, params->mu_rate, params->tr_rate, params->frag_len);
     double sderr = ks_sd/sqrt((double)params->replicates);
     ck_assert_msg(fabs(ks_mean - expecting) < sderr, "expcting ks to be %g, but got %g, with stderr = %g", expecting, ks_mean, sderr);
+    free(pxy);
     return EXIT_SUCCESS;
 }
 
@@ -565,11 +558,11 @@ START_TEST(test_hgt_pop_calc_pxy_p)
     params->seq_len = 100;
     params->frag_len = 10;
     params->mu_rate = 0.01;
-    params->replicates = 100;
+    params->replicates = 10;
     params->sample_size = 100;
-    params->tr_rate = 0.0;
+    params->tr_rate = 0;
     params->generations = 10*params->size*params->size;
-    params->maxl = params->size;
+    params->maxl = params->seq_len;
     
     int evolve_and_calc_pxy(hgt_pop_params *params, hgt_cov_sample_func f, const gsl_rng *r);
     evolve_and_calc_pxy(params, hgt_cov_sample_p2, RNG);

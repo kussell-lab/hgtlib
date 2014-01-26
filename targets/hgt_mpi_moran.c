@@ -11,6 +11,7 @@
 #include <mpi.h>
 #include "hgt_pop.h"
 #include "bstrlib.h"
+#include "hgt_utils.h"
 #include <time.h>
 
 hgt_pop ** init(hgt_pop_params * params, int rank, gsl_rng * r);
@@ -28,12 +29,12 @@ int main(int argc, char * argv[]) {
     hgt_pop_params_parse(params, argc, argv, "hgt_mpi_moran");
     hgt_pop_params_printf(params, stdout);
     
-    gsl_rng **rr = setup_rng(params, rank);
-    hgt_pop **ps = init(params, rank, rr[0]);
+    gsl_rng **rr = hgt_utils_alloc_gsl_rngs(params->replicates, rank);
+    hgt_pop **ps = hgt_utils_alloc_populations(params->replicates, params->size, params->seq_len, rank, rr);
     
     time_t start, end;
     start = clock();
-    evolve(ps, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, rank, rr);
+    hgt_utils_batch_evolve_moran(ps, params->replicates, params, rr);
     end = clock();
     
     if (rank == 0) {
@@ -127,25 +128,7 @@ bstring to_json(hgt_pop ** ps, hgt_pop_params * params) {
     
     for (i = 0; i < params->replicates; i ++) {
         hgt_pop * pop = ps[i];
-        bformata(b, "{\n");
-        bformata(b, "\"Size\": %ld,\n", params->size);
-        bformata(b, "\"Length\": %ld,\n", params->seq_len);
-        bformata(b, "\"MutationRate\": %g,\n", params->mu_rate);
-        bformata(b, "\"TransferRate\": %g,\n", params->tr_rate);
-        bformata(b, "\"FragLen\": %ld,\n", params->frag_len);
-        bformata(b, "\"Generation\": %ld,\n", params->generations);
-        bformata(b, "\"Genomes\": [\n");
-        int j;
-        for (j = 0; j < pop->size; j ++) {
-            if (j < pop->size - 1) {
-                bformata(b, "\"%s\",\n", pop->genomes[j]);
-            } else {
-                bformata(b, "\"%s\"\n", pop->genomes[j]);
-            }
-            
-            
-        }
-        bformata(b, "]\n}\n");
+        bformata(b, "%s", hgt_pop_to_json(pop, params));
         if (i < params->replicates-1)
         {
             bformata(b, ",\n");

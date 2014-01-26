@@ -16,6 +16,7 @@
 #include "hgt_pop.h"
 #include "hgt_cov.h"
 #include "hgt_corr.h"
+#include "bstrlib.h"
 
 const char DNA[5] = "ATGC\0";
 const int NUM_DNA_CHAR = 4;
@@ -82,6 +83,29 @@ int hgt_pop_free(hgt_pop * p) {
     
 }
 
+char *hgt_pop_to_json(hgt_pop *p, hgt_pop_params *params){
+    bstring b = bfromcstr("");
+    bformata(b, "{\n");
+    bformata(b, "\"Size\": %ld,\n", params->size);
+    bformata(b, "\"Length\": %ld,\n", params->seq_len);
+    bformata(b, "\"MutationRate\": %g,\n", params->mu_rate);
+    bformata(b, "\"TransferRate\": %g,\n", params->tr_rate);
+    bformata(b, "\"FragLen\": %ld,\n", params->frag_len);
+    bformata(b, "\"Generation\": %ld,\n", params->generations);
+    bformata(b, "\"Genomes\": [\n");
+    int j;
+    for (j = 0; j < p->size; j ++) {
+        if (j < p->size - 1) {
+            bformata(b, "\"%s\",\n", p->genomes[j]);
+        } else {
+            bformata(b, "\"%s\"\n", p->genomes[j]);
+        }
+    }
+    bformata(b, "]\n}\n");
+    
+    return bstr2cstr(b, '\n');
+}
+
 int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * progname){
     struct arg_int *size = arg_int1("n", "size", "<unsigned long>", "population size");
     struct arg_int *seq_len = arg_int1("l", "len", "<unsigned long>", "genome length");
@@ -93,13 +117,14 @@ int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * p
     struct arg_int *spl_size = arg_int0("s", "sample_size", "<unsigned long>", "sample size");
     struct arg_int *spl_time = arg_int0("i", "sample_time", "<unsigned long>", "sample time");
     struct arg_int *repl = arg_int0("r", "replication", "<unsigned long>", "replication");
+    struct arg_int *maxl = arg_int0("m", "maxl", "<unsigned long>", "maxl");
     
     struct arg_file *prefix = arg_file1("o", "output", "<output>", "prefix");
 
     struct arg_lit  *help    = arg_lit0(NULL,"help", "print this help and exit");
     struct arg_end  *end     = arg_end(20);
 
-    void* argtable[] = {size, seq_len, frag_len, mu_rate, tr_rate, gen, spl_time, spl_size, repl, prefix, help, end};
+    void* argtable[] = {size, seq_len, frag_len, mu_rate, tr_rate, gen, spl_time, spl_size, repl, maxl, prefix, help, end};
     int nerrors;
     int exit_code = EXIT_SUCCESS;
     /* verify the argtable[] entries were allocated sucessfully */
@@ -141,18 +166,29 @@ int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * p
     params->tr_rate = tr_rate->dval[0];
     params->generations = gen->ival[0];
     params->prefix = (char *) prefix->filename[0];
+    
+    if (maxl->count > 0) {
+        params->maxl = maxl->ival[0];
+    } else {
+        params->maxl = params->seq_len;
+    }
 
-    if (spl_time->count > 0)
-    {
+    if (spl_time->count > 0) {
         params->sample_time = spl_time->ival[0];
+    } else {
+        params->sample_time = 1;
     }
-    if (spl_size->count > 0)
-    {
+    
+    if (spl_size->count > 0) {
         params->sample_size = spl_size->ival[0];
+    } else {
+        params->sample_size = 100;
     }
-    if (repl->count > 0)
-    {
+    
+    if (repl->count > 0) {
         params->replicates = repl->ival[0];
+    } else {
+        params->replicates = 1;
     }
     
     exit:
@@ -177,6 +213,7 @@ int hgt_pop_params_printf(hgt_pop_params *params, FILE *stream) {
     fprintf(stream, "sample time = %lu\n", params->sample_time);
     fprintf(stream, "replicates = %lu\n", params->replicates);
     fprintf(stream, "prefix = %s\n", params->prefix);
+    fprintf(stream, "maxl = %lu\n", params->maxl);
     return EXIT_SUCCESS;
 }
 
@@ -297,7 +334,7 @@ int hgt_pop_evolve(hgt_pop *p, hgt_pop_params *params, hgt_pop_sample_func sampl
             hgt_pop_transfer(p, params->frag_len, r);
         }
     }
-
+    p->generation++;
     return EXIT_SUCCESS;
 }
 
@@ -357,11 +394,11 @@ int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample
     return EXIT_SUCCESS;
 }
 
-int hgt_pop_calc_pxy(double **pxy, unsigned long maxl, double *ds1, double *ds2, unsigned long len, int circular) {
+int hgt_pop_calc_pxy(double *pxy, unsigned long maxl, double *ds1, double *ds2, unsigned long len, int circular) {
     int i, l;
     for (l = 0; l < maxl; l++) {
         for (i = 0; i < 4; i++) {
-            pxy[l][i] = 0;
+            pxy[l*4+i] = 0;
         }
     }
     
@@ -381,25 +418,25 @@ int hgt_pop_calc_pxy(double **pxy, unsigned long maxl, double *ds1, double *ds2,
                 b = i - l;
                 num++;
             }
-            pxy[l][3] += ds1[a] * ds2[b];
+            pxy[l*4+3] += ds1[a] * ds2[b];
 //            pxy[l][3] += ds2[a] * ds1[b];
-            pxy[l][2] += ds1[a] * (1-ds2[b]);
+            pxy[l*4+2] += ds1[a] * (1-ds2[b]);
 //            pxy[l][2] += ds2[a] * (1-ds1[b]);
-            pxy[l][1] += (1-ds1[a]) * ds2[b];
+            pxy[l*4+1] += (1-ds1[a]) * ds2[b];
 //            pxy[l][1] += (1-ds2[a]) * ds1[b];
-            pxy[l][0] += (1-ds1[a]) * (1-ds2[b]);
+            pxy[l*4+0] += (1-ds1[a]) * (1-ds2[b]);
 //            pxy[l][0] += (1-ds2[a]) * (1-ds1[b]);
         }
-        pxy[l][3] /= (double) num;
-        pxy[l][2] /= (double) num;
-        pxy[l][1] /= (double) num;
-        pxy[l][0] /= (double) num;
+        pxy[l*4+3] /= (double) num;
+        pxy[l*4+2] /= (double) num;
+        pxy[l*4+1] /= (double) num;
+        pxy[l*4+0] /= (double) num;
     }
     
     return EXIT_SUCCESS;
 }
 
-int hgt_pop_calc_pxy_fft(double **pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular) {
+int hgt_pop_calc_pxy_fft(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular) {
     unsigned long next_power2(unsigned long len);
     unsigned long fft_len;
     int i, j, l;
@@ -451,13 +488,13 @@ int hgt_pop_calc_pxy_fft(double **pxy, unsigned long maxl, double *d1, double *d
             hgt_corr_fft(buf1, buf2, fft_len);
             for (l = 1; l < maxl; l++) {
                 if (circular != 0) {
-                    pxy[l][2*i+j] = (buf1[l] + buf1[2*fft_len-len+l]) / (mask[l]+mask[2*fft_len-len+l]);
+                    pxy[l*4+2*i+j] = (buf1[l] + buf1[2*fft_len-len+l]) / (mask[l]+mask[2*fft_len-len+l]);
                 } else {
-                    pxy[l][2*i+j] = buf1[l] / mask[l];
+                    pxy[l*4+2*i+j] = buf1[l] / mask[l];
                 }
                 
             }
-            pxy[0][2*i+j] = buf1[0] / mask[0];
+            pxy[2*i+j] = buf1[0] / mask[0];
         }
     }
     

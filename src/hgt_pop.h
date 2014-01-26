@@ -12,11 +12,13 @@
 #define hgt_hgt_pop_h
 
 #include "hgt_cov.h"
+#include "bstrlib.h"
 #include <gsl/gsl_rng.h>
 
 typedef struct {
     unsigned long size;     // population size
     unsigned long seq_len;  // genome length
+    unsigned long generation;
     char ** genomes;        // genome sequences
     
     // cache
@@ -51,6 +53,7 @@ typedef struct {
 hgt_pop * hgt_pop_alloc(unsigned long size, unsigned long seq_len, const gsl_rng * r);
 hgt_pop * hgt_pop_copy(hgt_pop * p);
 int hgt_pop_free(hgt_pop * r);
+char *hgt_pop_to_json(hgt_pop *p, hgt_pop_params *params);
 
 int hgt_pop_mutate_at(hgt_pop *p, unsigned long g, unsigned long s, const gsl_rng *r);
 int hgt_pop_mutate(hgt_pop *p, const gsl_rng *r);
@@ -83,7 +86,7 @@ hgt_pop_params *hgt_pop_params_alloc();
 double hgt_pop_calc_ks(hgt_pop *p);
 int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample_size, hgt_cov_sample_func sample_func, const gsl_rng *r);
 
-typedef int(*hgt_pop_calc_pxy_func)(double **pxy, unsigned long maxl, double *d1, double *d2, unsigned long len);
-int hgt_pop_calc_pxy(double **pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
-int hgt_pop_calc_pxy_fft(double **pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
+typedef int(*hgt_pop_calc_pxy_func)(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len);
+int hgt_pop_calc_pxy(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
+int hgt_pop_calc_pxy_fft(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
 #endif
