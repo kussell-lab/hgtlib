@@ -6,3 +6,7 @@ file(GLOB hgt_SRC
     "*.c"
 )
 add_library(hgt ${hgt_SRC})
+
+file(GLOB hgt_HEAD "*.h")
+install(TARGETS hgt DESTINATION lib)
+install(FILES ${hgt_HEAD} DESTINATION include)
