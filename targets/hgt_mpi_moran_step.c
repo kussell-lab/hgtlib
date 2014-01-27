@@ -23,13 +23,17 @@ int main(int argc, char *argv[]) {
     int corr_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng **rr);
     int write_pxy(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     
-    int numprocs, rank;
+    int numprocs, rank, exit_code;
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     
     hgt_pop_params *params = hgt_pop_params_alloc();
-    hgt_pop_params_parse(params, argc, argv, "hgt_mpi_moran_step");
+    exit_code = hgt_pop_params_parse(params, argc, argv, "hgt_mpi_moran_step");
+    if (exit_code == EXIT_FAILURE) {
+        goto exit;
+    }
+    
     if (rank == 0) {
         hgt_pop_params_printf(params, stdout);
     }
@@ -130,6 +134,7 @@ int main(int argc, char *argv[]) {
     hgt_utils_free_gsl_rngs(rr, params->replicates);
     hgt_pop_params_free(params);
     
+exit:
     MPI_Finalize();
 
     return EXIT_SUCCESS;

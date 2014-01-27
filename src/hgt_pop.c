@@ -144,7 +144,7 @@ int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * p
         printf("Usage: %s", progname);
         arg_print_syntax(stdout,argtable,"\n");
         arg_print_glossary(stdout,argtable,"  %-25s %s\n");
-        exit_code =  EXIT_SUCCESS;
+        exit_code =  EXIT_FAILURE;
         goto exit;
     }
 
