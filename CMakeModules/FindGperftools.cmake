@@ -16,7 +16,7 @@
 # GPERFTOOLS_FOUND System has Gperftools libs/headers
 # GPERFTOOLS_LIBRARIES The Gperftools libraries (tcmalloc & profiler)
 # GPERFTOOLS_INCLUDE_DIR The location of Gperftools headers
-
+set(Gperftools_ROOT_DIR $ENV{Gperftools_ROOT_DIR})
 find_library(GPERFTOOLS_TCMALLOC
   NAMES tcmalloc
   HINTS ${Gperftools_ROOT_DIR}/lib)
