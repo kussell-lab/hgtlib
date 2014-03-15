@@ -13,5 +13,10 @@ target_link_libraries(hgt_mpi_moran ${LIBS})
 set(CMAKE_C_COMPILER cc)
 add_executable(hgt_mpi_moran_step hgt_mpi_moran_step.c)
 target_link_libraries(hgt_mpi_moran_step ${LIBS})
-
 install(TARGETS hgt_mpi_moran_step DESTINATION bin)
+
+set(CMAKE_C_COMPILER cc)
+add_executable(hgt_mpi_moran_const hgt_mpi_moran_const.c)
+target_link_libraries(hgt_mpi_moran_const ${LIBS})
+install(TARGETS hgt_mpi_moran_const DESTINATION bin)
+

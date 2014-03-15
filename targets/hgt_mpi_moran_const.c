@@ -2,7 +2,7 @@
 //  hgt_mpi_moran_step.c
 //  hgt
 //
-//  Created by Mingzhi Lin on 1/26/14.
+//  Created by Mingzhi Lin on 3/14/14.
 //
 //
 
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
         }
     }
     
-    //    write_pops(ps, params, rank, numprocs);
+//    write_pops(ps, params, rank, numprocs);
     
     if (rank == 0) {
         

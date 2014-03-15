@@ -16,12 +16,12 @@
 // seq_len: genome sequence length
 // rank: identity for MPI process
 // rs: gsl_rng random generators
-hgt_pop ** hgt_utils_alloc_populations(unsigned long num, unsigned long size, unsigned long seq_len, int rank, gsl_rng ** rs) {
+hgt_pop ** hgt_utils_alloc_populations(unsigned long num, unsigned long size, unsigned long seq_len, int rank, gsl_rng * rng) {
     int i;
     hgt_pop ** pops;
     pops = malloc(num * sizeof(hgt_pop*));
     for (i = 0; i < num; i++) {
-        pops[i] = hgt_pop_alloc(size, seq_len, rs[i]);
+        pops[i] = hgt_pop_alloc(size, seq_len, rng);
     }
     return pops;
 }
@@ -146,11 +146,11 @@ void hgt_utils_increment_stat_variances(hgt_stat_variance *** vars, double ** va
 }
 
 // do batch evoluation
-int hgt_utils_batch_evolve_moran(hgt_pop ** pops, int num, hgt_pop_params * params, gsl_rng ** rs) {
+int hgt_utils_batch_evolve_moran(hgt_pop ** pops, int num, hgt_pop_params * params, gsl_rng *rng) {
     int i, j;
     for (i = 0; i < num; i++) {
         for (j = 0; j < params->generations; j++) {
-            hgt_pop_evolve(pops[i], params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, rs[i]);
+            hgt_pop_evolve(pops[i], params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, rng);
         }
     }
     return 0;
