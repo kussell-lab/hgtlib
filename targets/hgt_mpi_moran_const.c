@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
         
         asprintf(&fn, "%s.cov.txt", params->prefix);
         fpcov = fopen(fn, "w");
-        fprintf(fpcov, "#l\tscov\trcov\tpxpy\tsample n\tgenerations\n");
+        fprintf(fpcov, "#l\tscov\trcov\tpxpy\tscov var\trcov var\tpxpy var\tsample n\tgenerations\n");
         
         free(fn);
     }
