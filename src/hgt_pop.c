@@ -501,6 +501,35 @@ int hgt_pop_calc_pxy_fft(double *pxy, unsigned long maxl, double *d1, double *d2
     return EXIT_SUCCESS;
 }
 
+int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, int sample, const gsl_rng* rng) {
+    // allocate a binary matrix
+    short **matrix = malloc(sample*sizeof(short*));
+    int i, j;
+    unsigned long a, b;
+    
+    for (i = 0; i < sample; i++) {
+        // randomly choose two distinct genomes for comparison.
+        a = gsl_rng_uniform_int(rng, p->size);
+        b = gsl_rng_uniform_int(rng, p->size);
+        while (a == b) {
+            b = gsl_rng_uniform_int(rng, p->size);
+        }
+        
+        // do comparison to binary sequence.
+        matrix[i] = malloc(p->seq_len*sizeof(short));
+        for (j = 0; j < p->seq_len; j++) {
+            if (p->genomes[a][j] != p->genomes[b][j]) {
+                matrix[i][j] = 1;
+            } else {
+                matrix[i][j] = 0;
+            }
+        }
+    }
+    hgt_cov_result_calc_matrix(result, matrix, sample, p->seq_len);
+    
+    return EXIT_SUCCESS;
+}
+
 /******** PRIVATE FUNCTIONS ***********/
 int random_seq(char * seq, unsigned long seq_len, const gsl_rng * r) {
     int i;

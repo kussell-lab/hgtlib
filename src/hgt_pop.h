@@ -7,12 +7,11 @@
 //
 
 
-
 #ifndef hgt_hgt_pop_h
 #define hgt_hgt_pop_h
 
-#include "hgt_cov.h"
 #include "bstrlib.h"
+#include "hgt_cov.h"
 #include <gsl/gsl_rng.h>
 
 typedef struct {
@@ -84,6 +83,9 @@ int hgt_pop_params_printf(hgt_pop_params *params, FILE *stream);
 hgt_pop_params *hgt_pop_params_alloc();
 
 double hgt_pop_calc_ks(hgt_pop *p);
+
+int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, int sample, const gsl_rng* rng);
+
 int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample_size, hgt_cov_sample_func sample_func, const gsl_rng *r);
 
 typedef int(*hgt_pop_calc_pxy_func)(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len);

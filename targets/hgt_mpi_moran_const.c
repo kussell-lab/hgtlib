@@ -20,8 +20,10 @@
 
 int main(int argc, char *argv[]) {
     int write_pops(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs);
-    int corr_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng *r);
+    int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng *r);
+    int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, gsl_rng *rng);
     int write_pxy(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
+    int write_cov(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     
     int numprocs, rank, exit_code;
     MPI_Init(&argc, &argv);
@@ -52,6 +54,8 @@ int main(int argc, char *argv[]) {
     hgt_stat_variance ***p2vars;
     hgt_stat_variance ***p3vars;
     hgt_stat_variance ***p4vars;
+    hgt_stat_mean ***covmeans;
+    hgt_stat_variance ***covvars;
     
     if (rank == 0) {
         p2means = hgt_utils_alloc_stat_means(params->maxl, 4);
@@ -60,11 +64,14 @@ int main(int argc, char *argv[]) {
         p3vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
         p4means = hgt_utils_alloc_stat_means(params->maxl, 4);
         p4vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
+        covmeans = hgt_utils_alloc_stat_means(params->maxl+1, 3);
+        covvars = hgt_utils_alloc_stat_variance(params->maxl+1, 3);
     }
     
     FILE * fp2; // output p2
     FILE * fp3; // output p3
     FILE * fp4; // output p4
+    FILE * fpcov; // output cov
     if (rank == 0) {
         char * fn;
         asprintf(&fn, "%s.p2.txt", params->prefix);
@@ -79,6 +86,10 @@ int main(int argc, char *argv[]) {
         fp4 = fopen(fn, "w");
         fprintf(fp4, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
         
+        asprintf(&fn, "%s.cov.txt", params->prefix);
+        fpcov = fopen(fn, "w");
+        fprintf(fpcov, "#l\tscov\trcov\tpxpy\tsample n\tgenerations\n");
+        
         free(fn);
     }
     
@@ -91,15 +102,18 @@ int main(int argc, char *argv[]) {
     for (i = 0; i < params->sample_time; i++) {
         start = clock();
         hgt_utils_batch_evolve_moran(ps, params->replicates, params, rng);
-        corr_calc(p2means, p2vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p2, rng);
-        corr_calc(p3means, p3vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p3, rng);
-        corr_calc(p4means, p4vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p4, rng);
+        pxy_calc(p2means, p2vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p2, rng);
+        pxy_calc(p3means, p3vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p3, rng);
+        pxy_calc(p4means, p4vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p4, rng);
+        
+        cov_calc(covmeans, covvars, ps, params, rank, numprocs, rng);
         
         if (rank == 0) {
             printf("Ks = %g, Expected = %g, Std Err = %g\n", hgt_stat_mean_get(p2means[0][3]), hgt_predict_ks_moran(params->size, params->mu_rate, params->tr_rate, params->frag_len), sqrt(hgt_stat_variance_get(p2vars[0][3])/(double)hgt_stat_variance_get_n(p2vars[0][3])));
             write_pxy(fp2, params->maxl, p2means, p2vars, (i+1)*params->generations);
             write_pxy(fp3, params->maxl, p3means, p3vars, (i+1)*params->generations);
             write_pxy(fp4, params->maxl, p2means, p4vars, (i+1)*params->generations);
+            write_cov(fpcov, params->maxl, covmeans, covvars, (i+1)*params->generations);
             
             hgt_utils_clean_stat_means(p2means, params->maxl, 4);
             hgt_utils_clean_stat_means(p3means, params->maxl, 4);
@@ -107,6 +121,8 @@ int main(int argc, char *argv[]) {
             hgt_utils_clean_stat_variances(p2vars, params->maxl, 4);
             hgt_utils_clean_stat_variances(p3vars, params->maxl, 4);
             hgt_utils_clean_stat_variances(p4vars, params->maxl, 4);
+            hgt_utils_clean_stat_means(covmeans, params->maxl+1, 3);
+            hgt_utils_clean_stat_variances(covvars, params->maxl+1, 3);
         }
         
         end = clock();
@@ -145,7 +161,7 @@ exit:
     return EXIT_SUCCESS;
 }
 
-int corr_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng *r) {
+int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng *r) {
     int i, j, l, k, n, count, dest, tag;
     count = params->maxl * 4;
     dest = 0;
@@ -178,6 +194,59 @@ int corr_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, do
         }
     }
     
+    return EXIT_SUCCESS;
+}
+
+int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, gsl_rng *rng) {
+    int count, dest, tag;
+    count = params->maxl * 3 + 3; // scov + rcov + pxpy + ks + vd
+    dest = 0;
+    tag = 0;
+    double *buf;
+    hgt_cov_result *result ;
+    result = hgt_cov_result_alloc(params->maxl);
+    buf = malloc((params->maxl*3+3)*sizeof(double));
+    int i, j, k;
+    for (i = 0; i < params->replicates; i++) {
+        // calculate covariance result
+        hgt_pop_calc_cov(result, ps[i], params->sample_size, rng);
+        // load buf the result
+        for (j = 0; j < params->maxl; j++) {
+            buf[3*j] = result->scov[j];
+            buf[3*j+1] = result->rcov[j];
+            buf[3*j+2] = result->pxpy[j];
+            
+        }
+        buf[3*params->maxl] = result->ks;
+        buf[3*params->maxl + 1] = result->vd;
+        
+        if (rank != 0) {
+            MPI_Send(buf, count, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
+            
+        } else {
+            for (j = 0; j < numprocs; j++) {
+                if (j != 0) {
+                    MPI_Recv(buf, count, MPI_DOUBLE, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                }
+                
+                for (k = 0; k < params->maxl; k++) {
+                    hgt_stat_mean_increment(means[k][0], buf[3*k]);
+                    hgt_stat_mean_increment(means[k][1], buf[3*k+1]);
+                    hgt_stat_mean_increment(means[k][2], buf[3*k+2]);
+                    hgt_stat_variance_increment(vars[k][0], buf[3*k]);
+                    hgt_stat_variance_increment(vars[k][1], buf[3*k+1]);
+                    hgt_stat_variance_increment(vars[k][2], buf[3*k+2]);
+                }
+                
+                hgt_stat_mean_increment(means[params->maxl][0], buf[3*params->maxl]);
+                hgt_stat_mean_increment(means[params->maxl][1], buf[3*params->maxl+1]);
+                hgt_stat_variance_increment(vars[params->maxl][0], buf[3*params->maxl]);
+                hgt_stat_variance_increment(vars[params->maxl][1], buf[3*params->maxl+1]);
+            }
+        }
+    }
+    hgt_cov_result_free(result);
+    free(buf);
     return EXIT_SUCCESS;
 }
 
@@ -247,7 +316,6 @@ bstring to_json(hgt_pop ** ps, hgt_pop_params * params) {
 }
 
 int write_pxy(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen) {
-    
     int i, j;
     for (j = 0; j < maxl; j ++) {
         fprintf(fp, "%d\t", j);
@@ -261,5 +329,21 @@ int write_pxy(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_va
     }
     
     fflush(fp);
-    return 0;
+    return EXIT_SUCCESS;
+}
+
+int write_cov(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen){
+    int i, j;
+    for (i = 0; i < maxl; i++) {
+        fprintf(fp, "%d\t", i);
+        for (j = 0; j < 3; j++) {
+            fprintf(fp, "%g\t", hgt_stat_mean_get(means[i][j]));
+        }
+        for (j = 0; j < 3; j++) {
+            fprintf(fp, "%g\t", hgt_stat_variance_get(vars[i][j]));
+        }
+        fprintf(fp, "%ld\t%lu\n", hgt_stat_mean_get_n(means[i][0]), gen);
+    }
+    fflush(fp);
+    return EXIT_SUCCESS;
 }
