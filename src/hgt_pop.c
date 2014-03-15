@@ -527,6 +527,11 @@ int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, int sample, const gsl_r
     }
     hgt_cov_result_calc_matrix(result, matrix, sample, p->seq_len);
     
+    for (i = 0; i < sample; i++) {
+        free(matrix[i]);
+    }
+    free(matrix);
+    
     return EXIT_SUCCESS;
 }
 

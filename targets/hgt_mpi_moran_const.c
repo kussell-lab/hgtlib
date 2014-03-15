@@ -141,6 +141,8 @@ int main(int argc, char *argv[]) {
         hgt_utils_free_stat_variances(p2vars, params->maxl, 4);
         hgt_utils_free_stat_variances(p3vars, params->maxl, 4);
         hgt_utils_free_stat_variances(p4vars, params->maxl, 4);
+        hgt_utils_free_stat_means(covmeans, params->maxl+1, 3);
+        hgt_utils_free_stat_variances(covvars, params->maxl+1, 3);
         fclose(fp2);
         fclose(fp3);
         fclose(fp4);
