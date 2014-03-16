@@ -338,6 +338,26 @@ int hgt_pop_evolve(hgt_pop *p, hgt_pop_params *params, hgt_pop_sample_func sampl
     return EXIT_SUCCESS;
 }
 
+// evolve with exponential distributed fragment sizes
+int hgt_pop_evolve_expon_frag(hgt_pop *p, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r) {
+    double mu;
+    unsigned long count, k, frag_len;
+    sample_f(p, r);
+    mu = c_time_f(p->size, r) * (params->mu_rate + params->tr_rate) * (double) p->seq_len * (double) p->size;
+    count = gsl_ran_poisson(r, mu);
+    for (k = 0; k < count; k ++) {
+        if (gsl_rng_uniform(r) < params->mu_rate/(params->mu_rate + params->tr_rate)) {
+            hgt_pop_mutate(p, r);
+        } else {
+            frag_len = gsl_ran_exponential(r, (double) params->frag_len);
+            hgt_pop_transfer(p, frag_len, r);
+        }
+    }
+    p->generation++;
+    return EXIT_SUCCESS;
+}
+
+
 double hgt_pop_coal_time_moran(unsigned long p_size, const gsl_rng *r) {
     return gsl_ran_exponential(r, 1.0 / (double) p_size);
 }

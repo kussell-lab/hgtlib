@@ -76,6 +76,14 @@ int hgt_pop_evolve(hgt_pop *p,
                    hgt_pop_sample_func sample_f, 
                    hgt_pop_coal_time_func c_time_f, 
                    const gsl_rng *r);
+/*
+ population evolves under exponentially distributed fragment sizes
+ */
+int hgt_pop_evolve_expon_frag(hgt_pop *p,
+                              hgt_pop_params *params,
+                              hgt_pop_sample_func sample_f,
+                              hgt_pop_coal_time_func c_time_f,
+                              const gsl_rng *r);
 
 int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * progname);
 int hgt_pop_params_free(hgt_pop_params *params);

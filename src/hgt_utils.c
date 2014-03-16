@@ -156,6 +156,16 @@ int hgt_utils_batch_evolve_moran(hgt_pop ** pops, int num, hgt_pop_params * para
     return 0;
 }
 
+int hgt_utils_batch_evolve_moran_expon_frag(hgt_pop ** pops, int num, hgt_pop_params * params, gsl_rng *rng) {
+    int i, j;
+    for (i = 0; i < num; i++) {
+        for (j = 0; j < params->generations; j++) {
+            hgt_pop_evolve_expon_frag(pops[i], params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, rng);
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
 int hgt_utils_batch_evolve(hgt_pop **ps, int num, hgt_pop_params *params, hgt_pop_sample_func sample_func, hgt_pop_coal_time_func coal_time_func, gsl_rng *r) {
     int i, j;
     for (i = 0; i < num; i++) {
