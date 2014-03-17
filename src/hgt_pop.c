@@ -270,6 +270,9 @@ int hgt_pop_transfer(hgt_pop *p, unsigned long frag_len, const gsl_rng *r) {
     receiver = gsl_rng_uniform_int(r, p->size);
     if (donor != receiver) {
         start = gsl_rng_uniform_int(r, p->seq_len);
+        if (frag_len >= p->seq_len) {
+            frag_len = p->seq_len;
+        }
         hgt_pop_transfer_at(p, donor, receiver, frag_len, start);
     }
 
