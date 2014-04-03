@@ -22,6 +22,8 @@
 const char DNA[5] = "ATGC\0";
 const int NUM_DNA_CHAR = 4;
 
+unsigned long search_region(unsigned long pos, unsigned long** region, int num_regions, int inside);
+
 hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r) {
     char * ancestor;
     int i;
@@ -323,7 +325,10 @@ hgt_pop_params *hgt_pop_params_alloc() {
     return params;
 }
 
-int hgt_pop_mutate_at(hgt_pop *p, unsigned long g, unsigned long s, const gsl_rng *r) {
+int hgt_pop_mutate_at(hgt_pop *p,
+                      unsigned long g,
+                      unsigned long s,
+                      const gsl_rng *r) {
     int exit_code;
     exit_code = EXIT_SUCCESS;
 
@@ -337,35 +342,86 @@ int hgt_pop_mutate_at(hgt_pop *p, unsigned long g, unsigned long s, const gsl_rn
     return exit_code;
 }
 
-int hgt_pop_mutate(hgt_pop *p, hgt_pop_params* params, const gsl_rng *r) {
-    int exit_code;
-    exit_code = EXIT_SUCCESS;
-    unsigned long g, s;
-    g = gsl_rng_uniform_int(r, p->size);
-    if (params->mu_hotspot_num > 0) {
-        double ratio = (double) (params->mu_hotspot_num * params->mu_hotspot_length) / params->seq_len;
+int hgt_pop_mutate(hgt_pop *p, hgt_pop_params* params, const gsl_rng* r) {
+    int hgt_pop_mutate_at(hgt_pop *p,
+                          unsigned long g,
+                          unsigned long s,
+                          const gsl_rng *r);
+    unsigned long g, s, hs_len, pos;
+    double ratio;
+    // randomly choose a genome for mutation
+    g = gsl_rng_uniform_int(r, params->size);
+    
+    if (params -> mu_hotspot_num > 0) { // we need to deal hotspots
+        // first calculate total hotspot length, and its ratio to sequence length
+        hs_len = params->mu_hotspot_num * params->mu_hotspot_length;
+        ratio = (double) hs_len / (double) params->seq_len;
+        
+        // we need to decise a mutation is happened inside hotspot or outside
+        // we flip a coin
         double v = gsl_rng_uniform(r);
-        int i = gsl_rng_uniform_int(r, params->mu_hotspot_num);
-        if (v < (1-ratio)/(1+(params->mu_hotspot_ratio - 1)*ratio)) {
-            unsigned long length;
-            if (i >= params->mu_hotspot_num - 1) {
-                length = params->mu_hotspots[0][0] + params->seq_len - params->mu_hotspots[i][1];
-            } else {
-                length = params->mu_hotspots[i+1][0] - params->mu_hotspots[i][1];
-            }
-            
-            unsigned long d = gsl_rng_uniform_int(r, length);
-            s = (params->mu_hotspots[i][1] + d) % params->seq_len;
+        if (v < (1-ratio)/(1+(params->mu_hotspot_ratio - 1)*ratio)) { // outside hotspot
+            // we randomly choose a position from sites outside hotspots
+            pos = gsl_rng_uniform_int(r, params->seq_len - hs_len);
+            // and then search the absolute position on the genome
+            s = search_region(pos, params->mu_hotspots, params->mu_hotspot_num, 0);
         } else {
-            unsigned long d = gsl_rng_uniform_int(r, params->mu_hotspot_length);
-            s = (params->mu_hotspots[i][0] + d) % params->seq_len;
+            // similarly, we randomly choose a position from hotspots
+            pos = gsl_rng_uniform_int(r, hs_len);
+            // and then search the absolute position on the genome
+            s = search_region(pos, params->mu_hotspots, params->mu_hotspot_num, 1) % params->seq_len;
         }
-    } else {
-        s = gsl_rng_uniform_int(r, p->seq_len);
+    } else { // otherwise, we just randomly choose a site from the genome.
+        s = gsl_rng_uniform_int(r, params->seq_len) % params->seq_len;
     }
     
+    // do mutation given a genome and a site
     hgt_pop_mutate_at(p, g, s, r);
-    return exit_code;
+    
+    return EXIT_SUCCESS;
+}
+
+int hgt_pop_transfer(hgt_pop *p, hgt_pop_params* params, unsigned long frag_len, const gsl_rng* r) {
+    int hgt_pop_transfer_at(hgt_pop *p,
+                            unsigned long donor,
+                            unsigned long receiver,
+                            unsigned long frag_len,
+                            unsigned long start);
+    unsigned long s, donor, receiver, hs_len, pos;
+    double ratio;
+    // randomly choose a donor and a reciver
+    donor = gsl_rng_uniform_int(r, p->size);
+    receiver = gsl_rng_uniform_int(r, p->size);
+    
+    if (donor != receiver) {
+        if (params -> tr_hotspot_num > 0) { // we need to deal hotspots
+            // first calculate total hotspot length, and its ratio to sequence length
+            hs_len = params->tr_hotspot_num * params->tr_hotspot_length;
+            ratio = (double) hs_len / (double) params->seq_len;
+            
+            // we need to decise a mutation is happened inside hotspot or outside
+            // we flip a coin
+            double v = gsl_rng_uniform(r);
+            if (v < (1-ratio)/(1+(params->tr_hotspot_ratio - 1)*ratio)) { // outside hotspot
+                // we randomly choose a position from sites outside hotspots
+                pos = gsl_rng_uniform_int(r, params->seq_len - hs_len);
+                // and then search the absolute position on the genome
+                s = search_region(pos, params->tr_hotspots, params->tr_hotspot_num, 0);
+            } else {
+                // similarly, we randomly choose a position from hotspots
+                pos = gsl_rng_uniform_int(r, hs_len);
+                // and then search the absolute position on the genome
+                s = search_region(pos, params->tr_hotspots, params->tr_hotspot_num, 1) % params->seq_len;
+            }
+        } else { // otherwise, we just randomly choose a site from the genome.
+            s = gsl_rng_uniform_int(r, params->seq_len) % params->seq_len;
+        }
+        
+        // do transfer given a genome and a site
+        hgt_pop_transfer_at(p, donor, receiver, frag_len, s);
+    }
+    
+    return EXIT_SUCCESS;
 }
 
 int hgt_pop_transfer_at(hgt_pop *p,
@@ -384,39 +440,6 @@ int hgt_pop_transfer_at(hgt_pop *p,
         strncpy(p->genomes[receiver], p->genomes[donor], start + frag_len - p->seq_len);
     }
     return exit_code;
-}
-
-int hgt_pop_transfer(hgt_pop *p, hgt_pop_params *params, unsigned long frag_len, const gsl_rng *r) {
-    unsigned long donor, receiver, start;
-    donor = gsl_rng_uniform_int(r, p->size);
-    receiver = gsl_rng_uniform_int(r, p->size);
-    if (donor != receiver) {
-        if (params->tr_hotspot_num > 0) {
-            double v = gsl_rng_uniform(r);
-            double ratio = (double)(params->tr_hotspot_length*params->tr_hotspot_num)/ params->seq_len;
-            int i = gsl_rng_uniform_int(r, params->tr_hotspot_num);
-            if (v < (1-ratio)/(1+(params->tr_hotspot_ratio - 1)*ratio)) {
-                unsigned long length;
-                if (i >= params->tr_hotspot_num - 1) {
-                    length = params->tr_hotspots[0][0] + params->seq_len - params->tr_hotspots[i][1];
-                } else {
-                    length = params->tr_hotspots[i+1][0] - params->tr_hotspots[i][1];
-                }
-                
-                unsigned long d = gsl_rng_uniform_int(r, length);
-                start = (params->tr_hotspots[i][1] + d) % params->seq_len;
-            } else {
-                unsigned long d = gsl_rng_uniform_int(r, params->tr_hotspot_length);
-                start = (params->tr_hotspots[i][0] + d) % params->seq_len;
-            }
-        } else {
-            start = gsl_rng_uniform_int(r, p->seq_len);
-        }
-        
-        hgt_pop_transfer_at(p, donor, receiver, frag_len, start);
-    }
-
-    return EXIT_SUCCESS;
 }
 
 int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
@@ -715,4 +738,25 @@ unsigned long next_power2(unsigned long len) {
         v = len;
     }
     return v;
+}
+
+unsigned long search_region(unsigned long pos, unsigned long** region, int num_regions, int inside) {
+    int i;
+    unsigned long c = pos;
+    for (i = 0; i < num_regions; i++) {
+        if (inside == 0) {
+            if (c < region[i][0]) {
+                return c;
+            } else {
+                c += (region[i][1] - region[i][0]);
+            }
+        } else {
+            if (c + region[i][0] < region[i][1] ) {
+                return c + region[i][0];
+            } else {
+                c -= (region[i][1] - region[i][0]);
+            }
+        }
+    }
+    return c;
 }
