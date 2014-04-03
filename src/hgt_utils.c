@@ -16,12 +16,13 @@
 // seq_len: genome sequence length
 // rank: identity for MPI process
 // rs: gsl_rng random generators
-hgt_pop ** hgt_utils_alloc_populations(unsigned long num, unsigned long size, unsigned long seq_len, int rank, gsl_rng * rng) {
+hgt_pop ** hgt_utils_alloc_populations(hgt_pop_params *params, int rank, gsl_rng * rng) {
     int i;
+    unsigned long num = params->replicates;
     hgt_pop ** pops;
     pops = malloc(num * sizeof(hgt_pop*));
     for (i = 0; i < num; i++) {
-        pops[i] = hgt_pop_alloc(size, seq_len, rng);
+        pops[i] = hgt_pop_alloc(params, rng);
     }
     return pops;
 }

@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     int seed = rank;
     gsl_rng *rng = gsl_rng_alloc(T);
     gsl_rng_set(rng, seed);
-    hgt_pop **ps = hgt_utils_alloc_populations(params->replicates, params->size, params->seq_len, rank, rng);
+    hgt_pop **ps = hgt_utils_alloc_populations(params, rank, rng);
     
     hgt_stat_mean ***p2means;
     hgt_stat_mean ***p3means;

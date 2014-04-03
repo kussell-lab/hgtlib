@@ -13,7 +13,7 @@
 #ifndef hgt_hgt_utils_h
 #define hgt_hgt_utils_h
 
-hgt_pop ** hgt_utils_alloc_populations(unsigned long num, unsigned long size, unsigned long seq_len, int rank, gsl_rng *rng);
+hgt_pop ** hgt_utils_alloc_populations(hgt_pop_params *params, int rank, gsl_rng *rng);
 void hgt_utils_free_populations(hgt_pop ** pops, int num);
 
 gsl_rng ** hgt_utils_alloc_gsl_rngs(int num, int rank);

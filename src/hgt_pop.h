@@ -20,6 +20,8 @@ typedef struct {
     unsigned long generation;
     char ** genomes;        // genome sequences
     
+    int ** transfer_hotspots; // transfer hotspots
+    
     // cache
     unsigned long * survived;
     unsigned long * new_born;
@@ -33,6 +35,18 @@ typedef struct {
     double mu_rate;         // mutation rate
     double tr_rate;         // transfer rate
     unsigned long frag_len; // fragment length
+    
+    // transfer parameters
+    int tr_hotspot_num;                // number of hotspot in the genome
+    unsigned long tr_hotspot_length;   // length of hotspot
+    double tr_hotspot_ratio;           // ratio of transfer rate
+    unsigned long **tr_hotspots; // locations of transfer hotspots
+    
+    // mutation parameters
+    int mu_hotspot_num;
+    unsigned long mu_hotspot_length;
+    double mu_hotspot_ratio;
+    unsigned long **mu_hotspots;
     
     // sample parameters
     unsigned long generations;          // generations
@@ -49,19 +63,19 @@ typedef struct {
     int fit_flat;  // fitting flat
 } hgt_pop_params;
 
-hgt_pop * hgt_pop_alloc(unsigned long size, unsigned long seq_len, const gsl_rng * r);
+hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r);
 hgt_pop * hgt_pop_copy(hgt_pop * p);
 int hgt_pop_free(hgt_pop * r);
 char *hgt_pop_to_json(hgt_pop *p, hgt_pop_params *params);
 
-int hgt_pop_mutate_at(hgt_pop *p, unsigned long g, unsigned long s, const gsl_rng *r);
-int hgt_pop_mutate(hgt_pop *p, const gsl_rng *r);
-int hgt_pop_transfer_at(hgt_pop *p, 
-                        unsigned long donor, 
-                        unsigned long reciever, 
-                        unsigned long frag_len, 
-                        unsigned long start);
-int hgt_pop_transfer(hgt_pop *p, unsigned long frag_len, const gsl_rng *r);
+//int hgt_pop_mutate_at(hgt_pop *p, unsigned long g, unsigned long s, const gsl_rng *r);
+//int hgt_pop_mutate(hgt_pop *p, const gsl_rng *r);
+//int hgt_pop_transfer_at(hgt_pop *p, 
+//                        unsigned long donor, 
+//                        unsigned long reciever, 
+//                        unsigned long frag_len, 
+//                        unsigned long start);
+//int hgt_pop_transfer(hgt_pop *p, unsigned long frag_len, const gsl_rng *r);
 
 typedef int (*hgt_pop_sample_func)(hgt_pop *p, const gsl_rng *r);
 int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r);
