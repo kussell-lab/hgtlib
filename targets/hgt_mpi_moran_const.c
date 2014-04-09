@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
             printf("Ks = %g, Expected = %g, Std Err = %g\n", hgt_stat_mean_get(p2means[0][3]), hgt_predict_ks_moran(params->size, params->mu_rate, params->tr_rate, params->frag_len), sqrt(hgt_stat_variance_get(p2vars[0][3])/(double)hgt_stat_variance_get_n(p2vars[0][3])));
             write_pxy(fp2, params->maxl, p2means, p2vars, (i+1)*params->generations);
             write_pxy(fp3, params->maxl, p3means, p3vars, (i+1)*params->generations);
-            write_pxy(fp4, params->maxl, p2means, p4vars, (i+1)*params->generations);
+            write_pxy(fp4, params->maxl, p4means, p4vars, (i+1)*params->generations);
             write_cov(fpcov, params->maxl, covmeans, covvars, (i+1)*params->generations);
             
             hgt_utils_clean_stat_means(p2means, params->maxl, 4);
