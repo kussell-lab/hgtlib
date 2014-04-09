@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
         }
     }
     
-//    write_pops(ps, params, rank, numprocs);
+    write_pops(ps, params, rank, numprocs);
     
     if (rank == 0) {
         
