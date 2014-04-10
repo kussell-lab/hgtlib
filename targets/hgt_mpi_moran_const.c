@@ -24,6 +24,7 @@ int main(int argc, char *argv[]) {
     int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, gsl_rng *rng);
     int write_pxy(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     int write_cov(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
+    int write_ks(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     
     int numprocs, rank, exit_code;
     MPI_Init(&argc, &argv);
@@ -72,6 +73,7 @@ int main(int argc, char *argv[]) {
     FILE * fp3; // output p3
     FILE * fp4; // output p4
     FILE * fpcov; // output cov
+    FILE * fpks;
     if (rank == 0) {
         char * fn;
         asprintf(&fn, "%s.p2.txt", params->prefix);
@@ -89,6 +91,10 @@ int main(int argc, char *argv[]) {
         asprintf(&fn, "%s.cov.txt", params->prefix);
         fpcov = fopen(fn, "w");
         fprintf(fpcov, "#l\tscov\trcov\tpxpy\tscov var\trcov var\tpxpy var\tsample n\tgenerations\n");
+        
+        asprintf(&fn, "%s.ks.txt", params->prefix);
+        fpks = fopen(fn, "w");
+        fprintf(fpks, "ks\tvd\tvar ks\tvar vd\tgenerations\n");
         
         free(fn);
     }
@@ -114,6 +120,7 @@ int main(int argc, char *argv[]) {
             write_pxy(fp3, params->maxl, p3means, p3vars, (i+1)*params->generations);
             write_pxy(fp4, params->maxl, p4means, p4vars, (i+1)*params->generations);
             write_cov(fpcov, params->maxl, covmeans, covvars, (i+1)*params->generations);
+            write_ks(fpks, params->maxl, covmeans, covvars, (i+1)*params->generations);
             
             hgt_utils_clean_stat_means(p2means, params->maxl, 4);
             hgt_utils_clean_stat_means(p3means, params->maxl, 4);
@@ -146,7 +153,8 @@ int main(int argc, char *argv[]) {
         fclose(fp2);
         fclose(fp3);
         fclose(fp4);
-        
+        fclose(fpcov);
+        fclose(fpks);
     }
     
     free(pxy);
@@ -347,5 +355,10 @@ int write_cov(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_va
         fprintf(fp, "%ld\t%lu\n", hgt_stat_mean_get_n(means[i][0]), gen);
     }
     fflush(fp);
+    return EXIT_SUCCESS;
+}
+
+int write_ks(FILE *fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen) {
+    fprintf(fp, "%g\t%g\t%g\t%g\t%lu\t%lu\n", hgt_stat_mean_get(means[maxl][0]), hgt_stat_mean_get(means[maxl][1]), hgt_stat_variance_get(vars[maxl][0]), hgt_stat_variance_get(vars[maxl][1]), hgt_stat_mean_get_n(means[maxl][0]), gen);
     return EXIT_SUCCESS;
 }
