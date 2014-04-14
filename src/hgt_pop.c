@@ -372,7 +372,7 @@ int hgt_pop_mutate(hgt_pop *p, hgt_pop_params* params, const gsl_rng* r) {
             s = search_region(pos, params->mu_hotspots, params->mu_hotspot_num, 1) % params->seq_len;
         }
     } else { // otherwise, we just randomly choose a site from the genome.
-        s = gsl_rng_uniform_int(r, params->seq_len) % params->seq_len;
+        s = gsl_rng_uniform_int(r, params->seq_len);
     }
     
     // do mutation given a genome and a site
@@ -414,7 +414,7 @@ int hgt_pop_transfer(hgt_pop *p, hgt_pop_params* params, unsigned long frag_len,
                 s = search_region(pos, params->tr_hotspots, params->tr_hotspot_num, 1) % params->seq_len;
             }
         } else { // otherwise, we just randomly choose a site from the genome.
-            s = gsl_rng_uniform_int(r, params->seq_len) % params->seq_len;
+            s = gsl_rng_uniform_int(r, params->seq_len);
         }
         
         // do transfer given a genome and a site
@@ -605,18 +605,18 @@ int hgt_pop_calc_pxy(double *pxy, unsigned long maxl, double *ds1, double *ds2, 
                 num++;
             }
             pxy[l*4+3] += ds1[a] * ds2[b];
-//            pxy[l][3] += ds2[a] * ds1[b];
+            pxy[l*4+3] += ds2[a] * ds1[b];
             pxy[l*4+2] += ds1[a] * (1-ds2[b]);
-//            pxy[l][2] += ds2[a] * (1-ds1[b]);
+            pxy[l*4+2] += ds2[a] * (1-ds1[b]);
             pxy[l*4+1] += (1-ds1[a]) * ds2[b];
-//            pxy[l][1] += (1-ds2[a]) * ds1[b];
+            pxy[l*4+1] += (1-ds2[a]) * ds1[b];
             pxy[l*4+0] += (1-ds1[a]) * (1-ds2[b]);
-//            pxy[l][0] += (1-ds2[a]) * (1-ds1[b]);
+            pxy[l*4+0] += (1-ds2[a]) * (1-ds1[b]);
         }
-        pxy[l*4+3] /= (double) num;
-        pxy[l*4+2] /= (double) num;
-        pxy[l*4+1] /= (double) num;
-        pxy[l*4+0] /= (double) num;
+        pxy[l*4+3] /= (double) 2*num;
+        pxy[l*4+2] /= (double) 2*num;
+        pxy[l*4+1] /= (double) 2*num;
+        pxy[l*4+0] /= (double) 2*num;
     }
     
     return EXIT_SUCCESS;

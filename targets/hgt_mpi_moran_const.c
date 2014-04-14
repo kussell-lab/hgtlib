@@ -183,7 +183,10 @@ int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, dou
         }
         
         for (l = 0; l < params->maxl; l++) {
-            pxy[l] = gsl_stats_mean(pxy+l, params->maxl*4, params->sample_size);
+            for (k = 0; k < 4; k++) {
+                pxy[l*4+k] = gsl_stats_mean(pxy+l*4+k, params->maxl*4, params->sample_size);
+            }
+            
         }
         
         if (rank != 0) {

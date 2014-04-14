@@ -48,8 +48,8 @@ int hgt_cov_result_calc_matrix(hgt_cov_result *r, short **matrix, unsigned long 
     xy = calloc(maxl, sizeof(double));
     smx = calloc(maxl, sizeof(double));
     smy = calloc(maxl, sizeof(double));
-    xvy = malloc(maxl*sizeof(double));
-    smxy = malloc(maxl*sizeof(double));
+    xvy = calloc(maxl, sizeof(double));
+    smxy = calloc(maxl, sizeof(double));
     ks_arr = calloc(size, sizeof(double));
     
     for (i = 0; i < size; i ++) {

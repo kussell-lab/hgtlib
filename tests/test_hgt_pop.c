@@ -231,6 +231,10 @@ START_TEST (test_hgt_pop_mutate)
     }
     
     hgt_pop_params *params = hgt_pop_params_alloc();
+    params->mu_hotspot_num = 0;
+    params->tr_hotspot_num = 0;
+    params->seq_len = p->seq_len;
+    params->size = p->size;
 
     for (i = 0; i < n; i++) {
         hgt_pop_mutate(p, params, r);
@@ -266,7 +270,9 @@ START_TEST (test_hgt_pop_transfer_at)
     unsigned long donor, reciever, start, frag_len;
     int n, i, k, s;
 
-     hgt_pop_params *params = hgt_pop_params_alloc();
+    hgt_pop_params *params = hgt_pop_params_alloc();
+    params->seq_len = p->seq_len;
+    params->size = p->size;
     
     n = 1000;
     for (i = 0; i < n; i++) {
