@@ -372,7 +372,7 @@ int hgt_pop_mutate(hgt_pop *p, hgt_pop_params* params, const gsl_rng* r) {
             s = search_region(pos, params->mu_hotspots, params->mu_hotspot_num, 1) % params->seq_len;
         }
     } else { // otherwise, we just randomly choose a site from the genome.
-        s = gsl_rng_uniform_int(r, params->seq_len) % params->seq_len;
+        s = gsl_rng_uniform_int(r, params->seq_len);
     }
     
     // do mutation given a genome and a site
@@ -414,7 +414,7 @@ int hgt_pop_transfer(hgt_pop *p, hgt_pop_params* params, unsigned long frag_len,
                 s = search_region(pos, params->tr_hotspots, params->tr_hotspot_num, 1) % params->seq_len;
             }
         } else { // otherwise, we just randomly choose a site from the genome.
-            s = gsl_rng_uniform_int(r, params->seq_len) % params->seq_len;
+            s = gsl_rng_uniform_int(r, params->seq_len);
         }
         
         // do transfer given a genome and a site
