@@ -605,18 +605,18 @@ int hgt_pop_calc_pxy(double *pxy, unsigned long maxl, double *ds1, double *ds2, 
                 num++;
             }
             pxy[l*4+3] += ds1[a] * ds2[b];
-//            pxy[l][3] += ds2[a] * ds1[b];
+            pxy[l*4+3] += ds2[a] * ds1[b];
             pxy[l*4+2] += ds1[a] * (1-ds2[b]);
-//            pxy[l][2] += ds2[a] * (1-ds1[b]);
+            pxy[l*4+2] += ds2[a] * (1-ds1[b]);
             pxy[l*4+1] += (1-ds1[a]) * ds2[b];
-//            pxy[l][1] += (1-ds2[a]) * ds1[b];
+            pxy[l*4+1] += (1-ds2[a]) * ds1[b];
             pxy[l*4+0] += (1-ds1[a]) * (1-ds2[b]);
-//            pxy[l][0] += (1-ds2[a]) * (1-ds1[b]);
+            pxy[l*4+0] += (1-ds2[a]) * (1-ds1[b]);
         }
-        pxy[l*4+3] /= (double) num;
-        pxy[l*4+2] /= (double) num;
-        pxy[l*4+1] /= (double) num;
-        pxy[l*4+0] /= (double) num;
+        pxy[l*4+3] /= (double) 2*num;
+        pxy[l*4+2] /= (double) 2*num;
+        pxy[l*4+1] /= (double) 2*num;
+        pxy[l*4+0] /= (double) 2*num;
     }
     
     return EXIT_SUCCESS;
