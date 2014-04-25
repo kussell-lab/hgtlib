@@ -179,7 +179,7 @@ int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, dou
     for (i = 0; i < params->replicates; i++) {
         for (n = 0; n < params->sample_size; n++) {
             hgt_pop_calc_dist(ps[i], d1, d2, 1, sample_func, r);
-            hgt_pop_calc_pxy(pxy+(n*params->maxl*4), params->maxl, d1, d2, params->seq_len, 1);
+            hgt_pop_calc_pxy_fft(pxy+(n*params->maxl*4), params->maxl, d1, d2, params->seq_len, 0);
         }
         
         for (l = 0; l < params->maxl; l++) {

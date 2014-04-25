@@ -606,10 +606,13 @@ int hgt_pop_calc_pxy(double *pxy, unsigned long maxl, double *ds1, double *ds2, 
             }
             pxy[l*4+3] += ds1[a] * ds2[b];
             pxy[l*4+3] += ds2[a] * ds1[b];
+            
             pxy[l*4+2] += ds1[a] * (1-ds2[b]);
-            pxy[l*4+2] += ds2[a] * (1-ds1[b]);
+            pxy[l*4+2] += (1-ds2[a]) * ds1[b];
+            
             pxy[l*4+1] += (1-ds1[a]) * ds2[b];
-            pxy[l*4+1] += (1-ds2[a]) * ds1[b];
+            pxy[l*4+1] += ds2[a]* (1-ds1[b]);
+            
             pxy[l*4+0] += (1-ds1[a]) * (1-ds2[b]);
             pxy[l*4+0] += (1-ds2[a]) * (1-ds1[b]);
         }
@@ -681,6 +684,22 @@ int hgt_pop_calc_pxy_fft(double *pxy, unsigned long maxl, double *d1, double *d2
                 
             }
             pxy[2*i+j] = buf1[0] / mask[0];
+            
+            for (l = 0; l < 2*fft_len; l++) {
+                buf2[l] = ds1[i][l];
+                buf1[l] = ds2[j][l];
+            }
+            hgt_corr_fft(buf1, buf2, fft_len);
+            for (l = 1; l < maxl; l++) {
+                if (circular != 0) {
+                    pxy[l*4+2*i+j] += (buf1[l] + buf1[2*fft_len-len+l]) / (mask[l]+mask[2*fft_len-len+l]);
+                } else {
+                    pxy[l*4+2*i+j] += buf1[l] / mask[l];
+                }
+                pxy[l*4+2*i+j] /= 2.0;
+            }
+            pxy[2*i+j] += buf1[0] / mask[0];
+            pxy[2*i+j] /= 2.0;
         }
     }
     
