@@ -20,6 +20,7 @@ hgt_cov_result *hgt_cov_result_alloc(unsigned long maxl) {
     result->scov = malloc(maxl*sizeof(double));
     result->rcov = malloc(maxl*sizeof(double));
     result->pxpy = malloc(maxl*sizeof(double));
+    result->tcov = malloc(maxl*sizeof(double));
     return result;
 }
 
@@ -104,14 +105,17 @@ int hgt_cov_result_calc_matrix(hgt_cov_result *r, short **matrix, unsigned long 
         smxy[i] = smx[i] * smy[i];
     }
     
+    r->ks = gsl_stats_mean(ks_arr, 1, size);
+    r->vd = gsl_stats_variance(ks_arr, 1, size);
+    
     for (i = 0; i < maxl; i++) {
         r->scov[i] = xy[i] - xvy[i];
         r->rcov[i] = xvy[i] - smxy[i];
         r->pxpy[i] = smxy[i];
+        r->tcov[i] = r->scov[i] + r->rcov[i] - r->vd;
     }
     
-    r->ks = gsl_stats_mean(ks_arr, 1, size);
-    r->vd = gsl_stats_variance(ks_arr, 1, size);
+    
     
     free(xs);
     free(xy);

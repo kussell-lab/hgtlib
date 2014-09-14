@@ -706,6 +706,38 @@ int hgt_pop_calc_pxy_fft(double *pxy, unsigned long maxl, double *d1, double *d2
     return EXIT_SUCCESS;
 }
 
+// Calcualte covariances using all individuals.
+int hgt_pop_calc_cov_all(hgt_cov_result *result, hgt_pop *p) {
+    // allocate a binary matrix
+    unsigned long matrix_size = p->size * (p->size - 1) / 2;
+    short  **matrix = malloc( matrix_size * sizeof(short*));
+    
+    int i, j, k, h;
+    
+    k = 0;
+    for (i = 0; i < p->size; i++) {
+        for (j = i + 1; j < p->size; j++) {
+            matrix[k] = malloc(p->seq_len*sizeof(short));
+            for (h = 0; h < p->seq_len; h++) {
+                if (p->genomes[i][h] != p->genomes[j][h]) {
+                    matrix[k][h] = 1;
+                } else {
+                    matrix[k][h] = 0;
+                }
+            }
+            k++;
+        }
+    }
+    
+    hgt_cov_result_calc_matrix(result, matrix, matrix_size, p->seq_len);
+    
+    for (i = 0; i < matrix_size; i++) {
+        free(matrix[i]);
+    }
+    
+    return EXIT_SUCCESS;
+}
+
 int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, int sample, const gsl_rng* rng) {
     // allocate a binary matrix
     short **matrix = malloc(sample*sizeof(short*));

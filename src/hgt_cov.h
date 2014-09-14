@@ -18,6 +18,7 @@ typedef struct{
     double *scov;
     double *rcov;
     double *pxpy;
+    double *tcov;
 } hgt_cov_result;
 
 typedef int(*hgt_cov_sample_func)(unsigned long *a, unsigned long *b, unsigned long *c, unsigned long *d, unsigned long p_size, const gsl_rng *r);
