@@ -33,4 +33,6 @@ int hgt_utils_batch_evolve_moran(hgt_pop ** pops, int num, hgt_pop_params * para
 int hgt_utils_batch_evolve_moran_expon_frag(hgt_pop ** pops, int num, hgt_pop_params * params, gsl_rng *rng);
 int hgt_utils_batch_evolve(hgt_pop **ps, int num, hgt_pop_params *params, hgt_pop_sample_func sample_func, hgt_pop_coal_time_func coal_time_func, gsl_rng *rr);
 
+int hgt_utils_Roulette_Wheel_select(double * weights, int size, const gsl_rng *r);
+
 #endif

@@ -19,6 +19,7 @@ typedef struct {
     unsigned long seq_len;  // genome length
     unsigned long generation;
     char ** genomes;        // genome sequences
+    double *fitness;        // genome fitness
     
     int ** transfer_hotspots; // transfer hotspots
     
@@ -61,12 +62,19 @@ typedef struct {
     // fitting paramters
     int fit_range; // fitting range
     int fit_flat;  // fitting flat
+
+    // fitness
+    double fitness_scale;
+    double fitness_shape;
+    double b_mu_rate;
 } hgt_pop_params;
 
 hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r);
 hgt_pop * hgt_pop_copy(hgt_pop * p);
 int hgt_pop_free(hgt_pop * r);
 char *hgt_pop_to_json(hgt_pop *p, hgt_pop_params *params);
+
+double hgt_pop_mean_fitness(hgt_pop *p);
 
 typedef int (*hgt_pop_sample_func)(hgt_pop *p, const gsl_rng *r);
 int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r);
@@ -76,19 +84,16 @@ typedef double (*hgt_pop_coal_time_func)(unsigned long p_size, const gsl_rng *r)
 double hgt_pop_coal_time_moran(unsigned long p_size, const gsl_rng *r);
 double hgt_pop_coal_time_wf(unsigned long p_size, const gsl_rng *r);
 
+typedef double (*hgt_pop_frag_func)(hgt_pop_params *params, const gsl_rng *r);
+double hgt_pop_frag_constant(hgt_pop_params *params, const gsl_rng *r);
+double hgt_pop_frag_exp(hgt_pop_params *params, const gsl_rng *r);
+
 int hgt_pop_evolve(hgt_pop *p, 
                    hgt_pop_params *params, 
                    hgt_pop_sample_func sample_f, 
                    hgt_pop_coal_time_func c_time_f, 
+                   hgt_pop_frag_func frag_f, 
                    const gsl_rng *r);
-/*
- population evolves under exponentially distributed fragment sizes
- */
-int hgt_pop_evolve_expon_frag(hgt_pop *p,
-                              hgt_pop_params *params,
-                              hgt_pop_sample_func sample_f,
-                              hgt_pop_coal_time_func c_time_f,
-                              const gsl_rng *r);
 
 int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * progname);
 int hgt_pop_params_free(hgt_pop_params *params);

@@ -16,6 +16,7 @@
 #include "hgt_pop.h"
 #include "hgt_cov.h"
 #include "hgt_corr.h"
+#include "hgt_utils.h"
 #include "bstrlib.h"
 #include "ini.h"
 
@@ -35,6 +36,7 @@ hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r) {
     p->seq_len = params->seq_len;
     
     p->genomes = (char **) malloc(p->size * sizeof(char *));
+    p->fitness = (double *) malloc(p->size * sizeof(double));
     
     // random initilize genomes
     ancestor = malloc((p->seq_len+1) * sizeof(char));
@@ -42,6 +44,7 @@ hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r) {
     for (i = 0; i < p->size; i ++) {
         p->genomes[i] = malloc((p->seq_len+1) * sizeof(char));
         strcpy(p->genomes[i], ancestor);
+        p->fitness[i] = 0;
     }
     
     // define transfer hotspots
@@ -90,9 +93,11 @@ hgt_pop * hgt_pop_copy(hgt_pop * p) {
     new_p->size = p->size;
     new_p->seq_len = p->seq_len;
     new_p->genomes = (char **) malloc(p->size * sizeof(char *));
+    new_p->fitness = (double *) malloc(p->size * sizeof(double));
     for (i = 0; i < p->size; i++) {
         new_p->genomes[i] = malloc((p->seq_len+1) * sizeof(char));
         strcpy(new_p->genomes[i], p->genomes[i]);
+        new_p->fitness[i] = p->fitness[i];
     }
     
     // initilize caches
@@ -108,6 +113,7 @@ int hgt_pop_free(hgt_pop * p) {
         free(p->genomes[i]);
     }
     free(p->genomes);
+    free(p->fitness);
     if (p->cache_allocated != 0) {
         free(p->survived);
         free(p->new_born);
@@ -179,6 +185,12 @@ static int hgt_pop_params_handler(void *params, const char* section, const char*
         pconfig->tr_hotspot_length = atoi(value);
     } else if (MATCH("transfer", "hotspot_ratio")) {
         pconfig->tr_hotspot_ratio = atoi(value);
+    } else if (MATCH("fitness", "rate")) {
+        pconfig->b_mu_rate = atof(value);
+    } else if (MATCH("fitness", "scale")) {
+        pconfig->fitness_scale = atof(value);
+    } else if (MATCH("fitness", "shape")) {
+        pconfig->fitness_shape = atof(value);
     } else {
         return 0;
     }
@@ -201,6 +213,9 @@ int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * p
     struct arg_dbl *mu_rate = arg_dbl0("u", "mu_rate", "<double>", "mutation rate");
     struct arg_dbl *tr_rate = arg_dbl0("t", "tr_rate", "<double>", "transfer rate");
     struct arg_int *gen = arg_int0("g", "gen", "<unsigned long>", "generations");
+    struct arg_dbl *b_mu_rate = arg_dbl0("z", "b_mu_rate", "<double>", "beneficial mutation rate");
+    struct arg_dbl *fitness_scale = arg_dbl0("x", "fitness_scale", "<double>", "selection efficient scale");
+    struct arg_dbl *fitness_shape = arg_dbl0("y", "fitness_shape", "<double>", "selection efficient shape");
     
     struct arg_int *spl_size = arg_int0("s", "sample_size", "<unsigned long>", "sample size");
     struct arg_int *spl_time = arg_int0("i", "sample_time", "<unsigned long>", "sample time");
@@ -214,7 +229,7 @@ int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * p
     struct arg_lit  *help    = arg_lit0(NULL,"help", "print this help and exit");
     struct arg_end  *end     = arg_end(20);
 
-    void* argtable[] = {size, seq_len, frag_len, mu_rate, tr_rate, gen, spl_time,
+    void* argtable[] = {size, seq_len, frag_len, mu_rate, tr_rate, gen, b_mu_rate, fitness_scale, fitness_shape, spl_time,
         spl_size, repl, maxl, prefix, config, help, end};
     int nerrors;
     int exit_code = EXIT_SUCCESS;
@@ -263,6 +278,9 @@ int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * p
     params->tr_rate = tr_rate->dval[0];
     params->generations = gen->ival[0];
     params->prefix = (char *) prefix->filename[0];
+    params->b_mu_rate = b_mu_rate->dval[0];
+    params->fitness_shape = fitness_shape->dval[0];
+    params->fitness_scale = fitness_scale->dval[0];
     
     if (maxl->count > 0) {
         params->maxl = maxl->ival[0];
@@ -317,6 +335,9 @@ int hgt_pop_params_printf(hgt_pop_params *params, FILE *stream) {
     fprintf(stream, "mutation hotspot number = %d\n", params->mu_hotspot_num);
     fprintf(stream, "mutation hotspot length = %lu\n", params->mu_hotspot_length);
     fprintf(stream, "mutation hotspot ratio = %g\n", params->mu_hotspot_ratio);
+    fprintf(stream, "fitness mutation rate = %g\n", params->b_mu_rate);
+    fprintf(stream, "fitness scale = %g\n", params->fitness_scale);
+    fprintf(stream, "fitness shape = %g\n", params->fitness_shape);
     return EXIT_SUCCESS;
 }
 
@@ -341,6 +362,17 @@ int hgt_pop_mutate_at(hgt_pop *p,
 
     return exit_code;
 }
+
+int hgt_pop_mutate_step(hgt_pop *p, hgt_pop_params *params, const gsl_rng *r) {
+    unsigned g;
+    // randomly choose a cell.
+    g = gsl_rng_uniform_int(r, p->size);
+    p->fitness[g] += params->fitness_scale;
+
+    return EXIT_SUCCESS;
+}
+
+
 
 int hgt_pop_mutate(hgt_pop *p, hgt_pop_params* params, const gsl_rng* r) {
     int hgt_pop_mutate_at(hgt_pop *p,
@@ -443,12 +475,28 @@ int hgt_pop_transfer_at(hgt_pop *p,
 }
 
 int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
-    unsigned long a, b;
-    a = gsl_rng_uniform_int(r, p->size);
-    b = gsl_rng_uniform_int(r, p->size);
-    if (a != b) {
-        strcpy(p->genomes[b], p->genomes[a]);
+    unsigned long b, d;
+    double meanFit, f;
+    double * weights;
+    int i;
+    // randomly choose a going-death cell.
+    d = gsl_rng_uniform_int(r, p->size);
+    // randomly choose a going-birth one according to the fitness.
+    // first calculate the fitness for each cell.
+    meanFit = hgt_pop_mean_fitness(p);
+    weights = (double*) malloc(p->size * sizeof(double));
+    for (i = 0; i < p->size; i++) {
+        f = p->fitness[i];
+        weights[i] = 1 + (f - meanFit);
     }
+    // randomly choose one proportional to the fitness.
+    b = hgt_utils_Roulette_Wheel_select(weights, p->size, r);
+    // copy the genome and its fitness from b to d.
+    if (b != d) {
+        strcpy(p->genomes[d], p->genomes[b]);
+        p->fitness[d] = p->fitness[b];
+    }
+
     return EXIT_SUCCESS;
 }
 
@@ -487,39 +535,44 @@ int hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r) {
 
 }
 
-int hgt_pop_evolve(hgt_pop *p, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r) {
-    double mu;
-    unsigned long count, k;
-    sample_f(p, r);
-    mu = c_time_f(p->size, r) * (params->mu_rate + params->tr_rate) * (double) p->seq_len * (double) p->size;
-    count = gsl_ran_poisson(r, mu);
-    for (k = 0; k < count; k ++) {
-        if (gsl_rng_uniform(r) < params->mu_rate/(params->mu_rate + params->tr_rate)) {
-            hgt_pop_mutate(p, params, r);
-        } else {
-            hgt_pop_transfer(p, params, params->frag_len, r);
-        }
-    }
-    p->generation++;
-    return EXIT_SUCCESS;
+double hgt_pop_frag_constant(hgt_pop_params *params, const gsl_rng *r) {
+    return (double) params->frag_len;
 }
 
-// evolve with exponential distributed fragment sizes
-int hgt_pop_evolve_expon_frag(hgt_pop *p, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r) {
-    double mu;
+double hgt_pop_frag_exp(hgt_pop_params *params, const gsl_rng *r) {
+    return gsl_ran_exponential(r, (double) params->frag_len);
+}
+
+int hgt_pop_evolve(hgt_pop *p, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, hgt_pop_frag_func frag_f, const gsl_rng *r) {
+    double mu, total;
     unsigned long count, k, frag_len;
+    int i;
+    double weights[3];
     sample_f(p, r);
-    mu = c_time_f(p->size, r) * (params->mu_rate + params->tr_rate) * (double) p->seq_len * (double) p->size;
+
+    weights[0] = params->mu_rate * (double) (p->seq_len * p->size);
+    weights[1] = params->tr_rate * (double) (p->seq_len * p->size);
+    weights[2] = params->b_mu_rate * (double) p->size;
+    total = 0;
+    for (i = 0; i < 3; i ++) {
+        total += weights[i];
+    }
+
+    mu = c_time_f(p->size, r) * total;
     count = gsl_ran_poisson(r, mu);
     for (k = 0; k < count; k ++) {
-        if (gsl_rng_uniform(r) < params->mu_rate/(params->mu_rate + params->tr_rate)) {
+        i = hgt_utils_Roulette_Wheel_select(weights, 3, r);
+        if (i == 0) {
             hgt_pop_mutate(p, params, r);
+        } else if (i == 1) {
+            frag_len = frag_f(params, r);
+            hgt_pop_transfer(p, params, params->frag_len, r);
         } else {
-            frag_len = gsl_ran_exponential(r, (double) params->frag_len);
-            hgt_pop_transfer(p, params, frag_len, r);
+            hgt_pop_mutate_step(p, params, r);
         }
     }
     p->generation++;
+
     return EXIT_SUCCESS;
 }
 
@@ -770,6 +823,19 @@ int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, int sample, const gsl_r
     free(matrix);
     
     return EXIT_SUCCESS;
+}
+
+double hgt_pop_mean_fitness(hgt_pop *p) {
+    double f;
+    int i;
+    f = 0;
+    for (i = 0; i < p->size; ++i){
+        f += p->fitness[i];
+    }
+
+    f /= (double) p->size;
+
+    return f;
 }
 
 /******** PRIVATE FUNCTIONS ***********/

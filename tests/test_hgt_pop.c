@@ -304,7 +304,7 @@ int evolve_and_calc_ks(double * ks, hgt_pop_params *params, hgt_pop_sample_func 
     for (m = 0; m < params->replicates; m++) {
         hgt_pop *p = hgt_pop_alloc(params, r);
         for (i = 0; i < params->generations; i++) {
-            hgt_pop_evolve(p, params, sample_f, c_time_f, r);
+            hgt_pop_evolve(p, params, sample_f, c_time_f, hgt_pop_frag_constant, r);
         }
         
         ks[m] = hgt_pop_calc_ks(p);
@@ -381,7 +381,7 @@ int evolve_and_calc_dist(hgt_pop_params *params, hgt_cov_sample_func f, int same
     for (i = 0; i < params->replicates; i++) {
         hgt_pop *p = hgt_pop_alloc(params, r);
         for (j = 0; j < params->generations; j++) {
-            hgt_pop_evolve(p, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, r);
+            hgt_pop_evolve(p, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, hgt_pop_frag_constant, r);
         }
         double ds1[params->seq_len];
         double ds2[params->seq_len];
@@ -413,7 +413,7 @@ int evolve_and_calc_dist(hgt_pop_params *params, hgt_cov_sample_func f, int same
     for (i = 0; i < params->replicates; i++) {
         hgt_pop *p = hgt_pop_alloc(params, r);
         for (j = 0; j < params->generations; j++) {
-            hgt_pop_evolve(p, params, hgt_pop_sample_wf, hgt_pop_coal_time_wf, r);
+            hgt_pop_evolve(p, params, hgt_pop_sample_wf, hgt_pop_coal_time_wf, hgt_pop_frag_constant, r);
         }
         double ds1[params->seq_len];
         double ds2[params->seq_len];
@@ -550,7 +550,7 @@ int evolve_and_calc_pxy(hgt_pop_params *params, hgt_cov_sample_func f, const gsl
     for (i = 0; i < params->replicates; i++) {
         hgt_pop *p = hgt_pop_alloc(params, r);
         for (j = 0; j < params->generations; j++) {
-            hgt_pop_evolve(p, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, r);
+            hgt_pop_evolve(p, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, hgt_pop_frag_constant, r);
         }
         for (j = 0; j < params->sample_size; j++) {
             hgt_pop_calc_dist(p, d1, d2, 1, f, r);

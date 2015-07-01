@@ -151,7 +151,7 @@ int hgt_utils_batch_evolve_moran(hgt_pop ** pops, int num, hgt_pop_params * para
     int i, j;
     for (i = 0; i < num; i++) {
         for (j = 0; j < params->generations; j++) {
-            hgt_pop_evolve(pops[i], params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, rng);
+            hgt_pop_evolve(pops[i], params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, hgt_pop_frag_constant, rng);
         }
     }
     return 0;
@@ -161,7 +161,7 @@ int hgt_utils_batch_evolve_moran_expon_frag(hgt_pop ** pops, int num, hgt_pop_pa
     int i, j;
     for (i = 0; i < num; i++) {
         for (j = 0; j < params->generations; j++) {
-            hgt_pop_evolve_expon_frag(pops[i], params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, rng);
+            hgt_pop_evolve(pops[i], params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, hgt_pop_frag_exp, rng);
         }
     }
     return EXIT_SUCCESS;
@@ -171,9 +171,29 @@ int hgt_utils_batch_evolve(hgt_pop **ps, int num, hgt_pop_params *params, hgt_po
     int i, j;
     for (i = 0; i < num; i++) {
         for (j = 0; j < params->generations; j++) {
-            hgt_pop_evolve(ps[i], params, sample_func, coal_time_func, r);
+            hgt_pop_evolve(ps[i], params, sample_func, coal_time_func, hgt_pop_frag_constant, r);
         }
     }
     return EXIT_SUCCESS;
 }
 
+int hgt_utils_Roulette_Wheel_select(double * weights, int size, const gsl_rng *r) {
+    int i;
+    double total, v, accu;
+    total = 0;
+    for (i = 0; i < size; i++) {
+        total += weights[i];
+    }
+
+    v = gsl_rng_uniform_pos(r);
+
+    accu = 0;
+    for (i = 0; i < size; i++) {
+        accu += weights[i];
+        if (accu/total >= v) {
+           return i;
+        }
+    }
+
+    return -1;
+}
