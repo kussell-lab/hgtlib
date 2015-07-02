@@ -19,6 +19,7 @@
 #include "hgt_utils.h"
 #include "bstrlib.h"
 #include "ini.h"
+#include <math.h>
 
 const char DNA[5] = "ATGC\0";
 const int NUM_DNA_CHAR = 4;
@@ -487,7 +488,7 @@ int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
     weights = (double*) malloc(p->size * sizeof(double));
     for (i = 0; i < p->size; i++) {
         f = p->fitness[i];
-        weights[i] = 1 + (f - meanFit);
+        weights[i] = exp(f - meanFit);
     }
     // randomly choose one proportional to the fitness.
     b = hgt_utils_Roulette_Wheel_select(weights, p->size, r);
@@ -496,6 +497,8 @@ int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
         strcpy(p->genomes[d], p->genomes[b]);
         p->fitness[d] = p->fitness[b];
     }
+    
+    free(weights);
 
     return EXIT_SUCCESS;
 }

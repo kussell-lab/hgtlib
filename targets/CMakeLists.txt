@@ -1,10 +1,9 @@
 find_package(MPI REQUIRED)
 find_package(GSL REQUIRED)
 find_package(ArgTable REQUIRED)
-find_package(Gperftools REQUIRED)
 set(CMAKE_C_FLAGS "-pthread -pg")
-include_directories(${GSL_INCLUDE_DIR} ${ARGTABLE_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} ${GPERFTOOLS_INCLUDE_DIR} . ../src ../bstrlib)
-set(LIBS ${LIBS} ${MPI_LIBRARIES} ${GSL_LIBRARIES} ${ARGTABLE_LIBRARIES} ${GPERFTOOLS_LIBRARIES} hgt bstrlib)
+include_directories(${GSL_INCLUDE_DIR} ${ARGTABLE_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} . ../src ../bstrlib)
+set(LIBS ${LIBS} ${MPI_LIBRARIES} ${GSL_LIBRARIES} ${ARGTABLE_LIBRARIES} hgt bstrlib)
 MESSAGE(STATUS ${MPI_INCLUDE_PATH})
 
 set(CMAKE_C_COMPILER cc)
