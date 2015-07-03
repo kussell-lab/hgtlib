@@ -38,6 +38,7 @@ hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r) {
     
     p->genomes = (char **) malloc(p->size * sizeof(char *));
     p->fitness = (double *) malloc(p->size * sizeof(double));
+    p->linkages = (hgt_pop_linkage **) malloc(p->size * sizeof(hgt_pop_linkage*));
     
     // random initilize genomes
     ancestor = malloc((p->seq_len+1) * sizeof(char));
@@ -46,6 +47,7 @@ hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r) {
         p->genomes[i] = malloc((p->seq_len+1) * sizeof(char));
         strcpy(p->genomes[i], ancestor);
         p->fitness[i] = 0;
+        p->linkages[i] = hgt_pop_linkage_alloc();
     }
     
     // define transfer hotspots
@@ -112,9 +114,11 @@ int hgt_pop_free(hgt_pop * p) {
     int i;
     for (i = 0; i < p->size; i ++) {
         free(p->genomes[i]);
+        free(p->linkages[i]);
     }
     free(p->genomes);
     free(p->fitness);
+    free(p->linkages);
     if (p->cache_allocated != 0) {
         free(p->survived);
         free(p->new_born);
@@ -498,6 +502,25 @@ int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
         p->fitness[d] = p->fitness[b];
     }
     
+    // free the linkage of the dead one.
+    hgt_pop_linkage_free(p->linkages[d]);
+    // create two new linkages.
+    hgt_pop_linkage * l1, * l2, * parent;
+    l1 = hgt_pop_linkage_alloc();
+    l2 = hgt_pop_linkage_alloc();
+    // assign their parents and set their birth times to current generation.
+    parent = p->linkages[b];
+    l1->parent = parent;
+    l1->birthTime = p->generation;
+    l2->parent = parent;
+    l2->birthTime = p->generation;
+    // increase the number of children of the parent by 2.
+    parent->numChildren += 2;
+    // locate the new linkages to the array.
+    p->linkages[b] = l1;
+    p->linkages[d] = l2;
+    
+    
     free(weights);
 
     return EXIT_SUCCESS;
@@ -839,6 +862,70 @@ double hgt_pop_mean_fitness(hgt_pop *p) {
     f /= (double) p->size;
 
     return f;
+}
+
+int hgt_pop_linkage_free(hgt_pop_linkage * l) {
+    hgt_pop_linkage * parent;
+    
+    if (!l) {
+        return EXIT_SUCCESS;
+    }
+    
+    if (l->numChildren <= 1) {
+        // obtain pointer to its parent before freeing.
+        parent = l->parent;
+        free(l);
+        // reduce the number of children of the parent by 1,
+        // and try to free the parent.
+        parent -> numChildren--;
+        hgt_pop_linkage_free(parent);
+    }
+    
+    return EXIT_SUCCESS;
+}
+
+hgt_pop_linkage * hgt_pop_linkage_alloc() {
+    hgt_pop_linkage * l;
+    l = (hgt_pop_linkage *) malloc(sizeof(hgt_pop_linkage));
+    l->numChildren = 0;
+    return l;
+}
+
+hgt_pop_linkage * hgt_pop_linkage_find_most_rescent_ancestor(hgt_pop_linkage *l1, hgt_pop_linkage *l2) {
+    hgt_pop_linkage * ancestor, * p1, * p2;
+    if (l1->parent == l2->parent) {
+        ancestor = l1->parent;
+    } else {
+        p1 = l1;
+        p2 = l2;
+        if (l1->birthTime == l2->birthTime) {
+            p1 = l1->parent;
+            p2 = l2->parent;
+        } else {
+            if (l1->birthTime > l2->birthTime) {
+                p1 = l1->parent;
+            } else {
+                p2 = l2->parent;
+            }
+        }
+        
+        ancestor = hgt_pop_linkage_find_most_rescent_ancestor(p1, p2);
+    }
+    
+    return ancestor;
+}
+
+int hgt_pop_calc_t2(hgt_pop *p, unsigned long sample_size, unsigned long * res, const gsl_rng *rng) {
+    int i, a, b;
+    for (i = 0; i < sample_size; i++) {
+        a = gsl_rng_uniform_int(rng, p->size);
+        b = gsl_rng_uniform_int(rng, p->size);
+        while (a == b) {
+            b = gsl_rng_uniform_int(rng, p->size);
+        }
+        res[i] = hgt_pop_linkage_find_most_rescent_ancestor(p->linkages[a], p->linkages[b]);
+    }
+    return EXIT_SUCCESS;
 }
 
 /******** PRIVATE FUNCTIONS ***********/

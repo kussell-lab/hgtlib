@@ -25,6 +25,7 @@ int main(int argc, char *argv[]) {
     int write_pxy(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     int write_cov(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     int write_ks(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
+    int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, gsl_rng *rng);
     
     int numprocs, rank, exit_code;
     MPI_Init(&argc, &argv);
@@ -264,6 +265,16 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
     }
     hgt_cov_result_free(result);
     free(buf);
+    return EXIT_SUCCESS;
+}
+
+int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, gsl_rng *rng) {
+    int i;
+    unsigned long * res;
+    for (i = 0; i < params->replicates; i++) {
+        res = (unsigned long *) malloc(params->sample_size * sizeof(unsigned long));
+        hgt_pop_calc_t2(ps[i], params->sample_size, res, rng);
+    }
     return EXIT_SUCCESS;
 }
 
