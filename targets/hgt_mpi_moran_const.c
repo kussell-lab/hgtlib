@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
         
         asprintf(&fn, "%s.t2.txt", params->prefix);
         ft2 = fopen(fn, "w");
-        fprintf(ft2, "#t2\tt3\tt4\tgenerations\n");
+        fprintf(ft2, "#t2\tt3\tt4\tq3\tq4\tgenerations\n");
         
         free(fn);
     }
@@ -279,7 +279,7 @@ int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE *
     int write_t2(FILE * fp, unsigned long * res, int dim, int size, unsigned long generations);
     int i, j, count, dest, tag, linkage_sizes[3], max_linkage;
     max_linkage = 3;
-    count = params->sample_size * max_linkage;
+    count = params->sample_size * (2 * max_linkage - 1);
     for (i = 0; i < max_linkage; i++) {
         linkage_sizes[i] = i + 2;
     }
@@ -292,7 +292,10 @@ int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE *
     
     for (i = 0; i < params->replicates; i++) {
         for (j = 0; j < max_linkage; j++) {
-            hgt_pop_calc_coal_time(ps[i], params->sample_size, buf+j*params->sample_size, linkage_sizes[j], rng);
+            hgt_pop_calc_most_recent_ancestor_time(ps[i], params->sample_size, buf+j*params->sample_size, linkage_sizes[j], rng);
+        }
+        for (j = 1; j < max_linkage; j++) {
+            hgt_pop_calc_most_recent_coal_time(ps[i], params->sample_size, buf+(j+2)*params->sample_size, linkage_sizes[j], rng);
         }
         if (rank != 0) {
             MPI_Send(buf, count, MPI_UNSIGNED_LONG, dest, tag, MPI_COMM_WORLD);
@@ -302,7 +305,7 @@ int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE *
                     // recieve data from worker nodes.
                     MPI_Recv(buf, count, MPI_UNSIGNED_LONG, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
-                write_t2(fp, buf, max_linkage, params->sample_size, generations);
+                write_t2(fp, buf, 2 * max_linkage - 1, params->sample_size, generations);
             }
         }
     }

@@ -937,33 +937,58 @@ unsigned long hgt_pop_linkage_find_most_rescent_ancestor(hgt_pop_linkage ** link
 
 }
 
-unsigned long hgt_pop_linkage_find_most_rescent_ancestor2(hgt_pop_linkage *l1, hgt_pop_linkage *l2) {
-    hgt_pop_linkage * p1, * p2;
-    if (!l1->parent || !l2->parent) {
-        return 0;
-    }
+unsigned long hgt_pop_linkage_find_most_rescent_coalescence(hgt_pop_linkage ** linkages, int size) {
+    int i, j;
+    int bad, maxIndex;
+    unsigned long maxBirthTime;
+    hgt_pop_linkage * parent;
     
-    if (l1->parent == l2->parent) {
-        return l1->parent->birthTime;
+    bad = 0;
+    for (i = 0; i < size; ++i) {
+        if (!linkages[i]->parent) {
+            bad = 1;
+            break;
+        }
+    }
+
+    if (bad == 1) {
+        return 0;
     } else {
-        p1 = l1;
-        p2 = l2;
-        if (l1->birthTime == l2->birthTime) {
-            p1 = l1->parent;
-            p2 = l2->parent;
-        } else {
-            if (l1->birthTime > l2->birthTime) {
-                p1 = l1->parent;
-            } else {
-                p2 = l2->parent;
+        maxBirthTime = 0;
+        for (i = 0; i < size; i ++) {
+            for (j = i+1; j < size; j++) {
+                if (linkages[i]->parent == linkages[j]->parent) {
+                    if (maxBirthTime < linkages[i]->parent->birthTime) {
+                        maxBirthTime = linkages[i]->parent->birthTime;
+                    }
+                }
             }
         }
-
-        return hgt_pop_linkage_find_most_rescent_ancestor2(p1, p2);
+        if (maxBirthTime > 0) {
+            return maxBirthTime;
+        } else {
+            // find the one that has max birth time.
+            maxBirthTime = linkages[0]->birthTime;
+            maxIndex = 0;
+            for (i = 0; i < size; i++) {
+                if (maxBirthTime < linkages[i]->birthTime) {
+                    maxBirthTime = linkages[i]->birthTime;
+                    maxIndex = i;
+                }
+            }
+            linkages[maxIndex] = linkages[maxIndex]->parent;
+            return hgt_pop_linkage_find_most_rescent_coalescence(linkages, size);
+        }
     }
 }
 
-int hgt_pop_calc_coal_time(hgt_pop *p, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r) {
+int hgt_pop_calc_coal_time(hgt_pop *p, 
+    unsigned long sample_size, 
+    unsigned long *res, 
+    int linkage_size, 
+    hgt_pop_linkage_find_time_func find_func,
+    const gsl_rng *r) {
+
     int i, j, a[linkage_size], b[p->size];
     for (i = 0; i < p->size; i++) {
         b[i] = i;
@@ -976,28 +1001,18 @@ int hgt_pop_calc_coal_time(hgt_pop *p, unsigned long sample_size, unsigned long 
         for (j = 0; j < linkage_size; j++) {
             linkages[j] = p->linkages[a[j]];
         }
-        res[i] = hgt_pop_linkage_find_most_rescent_ancestor(linkages, linkage_size);
+        res[i] = find_func(linkages, linkage_size);
     }
 
     return EXIT_SUCCESS;
 }
 
-int hgt_pop_calc_t2(hgt_pop *p, unsigned long sample_size, unsigned long * res, const gsl_rng *rng) {
-    int linkage_size = 2;
-    hgt_pop_calc_coal_time(p, sample_size, res, linkage_size, rng);
-    return EXIT_SUCCESS;
+int hgt_pop_calc_most_recent_coal_time(hgt_pop *p, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r) {
+    return hgt_pop_calc_coal_time(p, sample_size, res, linkage_size, hgt_pop_linkage_find_most_rescent_coalescence, r);
 }
 
-int hgt_pop_calc_t3(hgt_pop *p, unsigned long sample_size, unsigned long * res, const gsl_rng *rng) {
-    int linkage_size = 3;
-    hgt_pop_calc_coal_time(p, sample_size, res, linkage_size, rng);
-    return EXIT_SUCCESS;
-}
-
-int hgt_pop_calc_t4(hgt_pop *p, unsigned long sample_size, unsigned long * res, const gsl_rng *rng) {
-    int linkage_size = 4;
-    hgt_pop_calc_coal_time(p, sample_size, res, linkage_size, rng);
-    return EXIT_SUCCESS;
+int hgt_pop_calc_most_recent_ancestor_time(hgt_pop *p, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r) {
+    return hgt_pop_calc_coal_time(p, sample_size, res, linkage_size, hgt_pop_linkage_find_most_rescent_ancestor, r);
 }
 
 /******** PRIVATE FUNCTIONS ***********/
