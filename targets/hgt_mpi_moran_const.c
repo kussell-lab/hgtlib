@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     int write_pxy(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     int write_cov(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     int write_ks(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
-    int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, gsl_rng *rng);
+    int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE * fp, int generations, gsl_rng *rng);
     
     int numprocs, rank, exit_code;
     MPI_Init(&argc, &argv);
@@ -75,6 +75,7 @@ int main(int argc, char *argv[]) {
     FILE * fp4; // output p4
     FILE * fpcov; // output cov
     FILE * fpks;
+    FILE * ft2; // output t2
     if (rank == 0) {
         char * fn;
         asprintf(&fn, "%s.p2.txt", params->prefix);
@@ -97,6 +98,10 @@ int main(int argc, char *argv[]) {
         fpks = fopen(fn, "w");
         fprintf(fpks, "ks\tvd\tvar ks\tvar vd\tgenerations\n");
         
+        asprintf(&fn, "%s.t2.txt", params->prefix);
+        ft2 = fopen(fn, "w");
+        fprintf(ft2, "#t2\tt3\tt4\tgenerations\n");
+        
         free(fn);
     }
     
@@ -114,6 +119,7 @@ int main(int argc, char *argv[]) {
         pxy_calc(p4means, p4vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p4, rng);
         
         cov_calc(covmeans, covvars, ps, params, rank, numprocs, rng);
+        t2_calc(ps, params, rank, numprocs, ft2, (i+1)*params->generations, rng);
         
         if (rank == 0) {
             printf("Ks = %g, Expected = %g, Std Err = %g\n", hgt_stat_mean_get(p2means[0][3]), hgt_predict_ks_moran(params->size, params->mu_rate, params->tr_rate, params->frag_len), sqrt(hgt_stat_variance_get(p2vars[0][3])/(double)hgt_stat_variance_get_n(p2vars[0][3])));
@@ -156,6 +162,7 @@ int main(int argc, char *argv[]) {
         fclose(fp4);
         fclose(fpcov);
         fclose(fpks);
+        fclose(ft2);
     }
     
     free(pxy);
@@ -268,12 +275,62 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
     return EXIT_SUCCESS;
 }
 
-int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, gsl_rng *rng) {
-    int i;
-    unsigned long * res;
+int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE * fp, int generations, gsl_rng *rng) {
+    int write_t2(FILE * fp, unsigned long * res, int dim, int size, unsigned long generations);
+    int i, j, count, dest, tag, linkage_sizes[3], max_linkage;
+    max_linkage = 3;
+    count = params->sample_size * max_linkage;
+    for (i = 0; i < max_linkage; i++) {
+        linkage_sizes[i] = i + 2;
+    }
+
+    unsigned long * buf;
+    buf = (unsigned long *) malloc((count + 1) * sizeof(unsigned long));
+
+    dest = 0;
+    tag = 0;
+    
     for (i = 0; i < params->replicates; i++) {
-        res = (unsigned long *) malloc(params->sample_size * sizeof(unsigned long));
-        hgt_pop_calc_t2(ps[i], params->sample_size, res, rng);
+        for (j = 0; j < max_linkage; j++) {
+            hgt_pop_calc_coal_time(ps[i], params->sample_size, buf+j*params->sample_size, linkage_sizes[j], rng);
+        }
+        if (rank != 0) {
+            MPI_Send(buf, count, MPI_UNSIGNED_LONG, dest, tag, MPI_COMM_WORLD);
+        } else {
+            for (j = 0; j < numprocs; j++) {
+                if (j != 0) {
+                    // recieve data from worker nodes.
+                    MPI_Recv(buf, count, MPI_UNSIGNED_LONG, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                }
+                write_t2(fp, buf, max_linkage, params->sample_size, generations);
+            }
+        }
+    }
+    free(buf);
+    return EXIT_SUCCESS;
+}
+
+int write_t2(FILE * fp, unsigned long * res, int dim, int size, unsigned long generations) {
+    int i, j, good;
+    unsigned long v, t;
+    for (i = 0; i < size; i++) {
+        good = 1;
+        for (j = 0; j < dim; j++){
+            v = res[j*size + i];
+            if (v <= 0) {
+                good = 0;
+                break;
+            }
+        }
+
+        if (good) {
+            for (j = 0; j < dim; j++) {
+                v = res[j*size + i];
+                t = generations - v;
+                fprintf(fp, "%lu\t", t);
+            }
+            fprintf(fp, "%lu\n", generations);
+        }
     }
     return EXIT_SUCCESS;
 }
