@@ -891,6 +891,7 @@ hgt_pop_linkage * hgt_pop_linkage_alloc() {
     hgt_pop_linkage * l;
     l = (hgt_pop_linkage *) malloc(sizeof(hgt_pop_linkage));
     l->numChildren = 0;
+    l->birthTime = 0;
     l->parent = NULL;
     return l;
 }
