@@ -580,7 +580,9 @@ hgt_pop_linkage * hgt_pop_linkage_new(hgt_pop_linkage * parent, unsigned long bi
     l = hgt_pop_linkage_alloc();
     l->birthTime = birthTime;
     l->parent = parent;
-    parent->numChildren++;
+    if (!parent) {
+        parent->numChildren++;
+    }
     return l;
 }
 
