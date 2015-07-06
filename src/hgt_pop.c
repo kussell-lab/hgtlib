@@ -527,12 +527,11 @@ int hgt_pop_transfer_at(hgt_pop *p,
         strncpy(p->genomes[receiver], p->genomes[donor], start + frag_len - p->seq_len);
         track_linkage = 1;
     }
-    
+
     if (track_linkage == 1 && donor != receiver) {
         hgt_pop_linkage * parent;
         parent = p->linkages[donor];
         hgt_pop_linkage_free(p->linkages[receiver]);
-        p->linkages[donor] = hgt_pop_linkage_new(parent, parent->birthTime);
         p->linkages[receiver] = hgt_pop_linkage_new(parent, parent->birthTime);
     }
 
