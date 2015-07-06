@@ -424,11 +424,15 @@ int hgt_pop_transfer(hgt_pop *p, hgt_pop_params* params, unsigned long frag_len,
                             unsigned long frag_len,
                             unsigned long start);
     unsigned long s, donor, receiver, hs_len, pos;
-    double ratio;
-    // randomly choose a donor and a reciver
-    donor = gsl_rng_uniform_int(r, p->size);
+    double ratio, * fitness;
+    // randomly choose a reciver
     receiver = gsl_rng_uniform_int(r, p->size);
-    
+    // randomly choose a donor according to fitnesses.
+    fitness = (double *) malloc(p->size * sizeof(double));
+    hgt_pop_calc_fitness(p, fitness);
+    donor = hgt_utils_Roulette_Wheel_select(fitness, p->size, r);
+    free(fitness);
+
     if (donor != receiver) {
         if (params -> tr_hotspot_num > 0) { // we need to deal hotspots
             // first calculate total hotspot length, and its ratio to sequence length
@@ -480,23 +484,17 @@ int hgt_pop_transfer_at(hgt_pop *p,
 
 int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
     unsigned long b, d;
-    double meanFit, f;
-    double * weights;
-    int i;
+    double * fitness;
     // increase population generation by 1.
     p->generation++;
     // randomly choose a going-death cell.
     d = gsl_rng_uniform_int(r, p->size);
     // randomly choose a going-birth one according to the fitness.
     // first calculate the fitness for each cell.
-    meanFit = hgt_pop_mean_fitness(p);
-    weights = (double*) malloc(p->size * sizeof(double));
-    for (i = 0; i < p->size; i++) {
-        f = p->fitness[i];
-        weights[i] = exp(f - meanFit);
-    }
+    fitness = (double *) malloc(p->size * sizeof(double));
+    hgt_pop_calc_fitness(p, fitness);
     // randomly choose one proportional to the fitness.
-    b = hgt_utils_Roulette_Wheel_select(weights, p->size, r);
+    b = hgt_utils_Roulette_Wheel_select(fitness, p->size, r);
     // copy the genome and its fitness from b to d.
     if (b != d) {
         strcpy(p->genomes[d], p->genomes[b]);
@@ -522,10 +520,9 @@ int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
     parent->numChildren += 2;
     // locate the new linkages to the array.
     p->linkages[b] = l1;
-    p->linkages[d] = l2;    
-    
-    free(weights);
+    p->linkages[d] = l2;
 
+    free(fitness);
     return EXIT_SUCCESS;
 }
 
@@ -1014,6 +1011,18 @@ int hgt_pop_calc_most_recent_coal_time(hgt_pop *p, unsigned long sample_size, un
 
 int hgt_pop_calc_most_recent_ancestor_time(hgt_pop *p, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r) {
     return hgt_pop_calc_coal_time(p, sample_size, res, linkage_size, hgt_pop_linkage_find_most_rescent_ancestor, r);
+}
+
+int hgt_pop_calc_fitness(hgt_pop *p, double * fitness) {
+    double f, mean_fitness;
+    mean_fitness = hgt_pop_mean_fitness(p);
+    int i;
+    for (i = 0; i < p->size; i++) {
+        f = p->fitness[i];
+        fitness[i] = exp(f - mean_fitness);
+    }
+
+    return EXIT_SUCCESS;
 }
 
 /******** PRIVATE FUNCTIONS ***********/

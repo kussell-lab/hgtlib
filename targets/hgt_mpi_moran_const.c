@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
         
         asprintf(&fn, "%s.ks.txt", params->prefix);
         fpks = fopen(fn, "w");
-        fprintf(fpks, "ks\tvd\tvar ks\tvar vd\tgenerations\n");
+        fprintf(fpks, "#ks\tvd\tvar ks\tvar vd\tgenerations\n");
         
         asprintf(&fn, "%s.t2.txt", params->prefix);
         ft2 = fopen(fn, "w");

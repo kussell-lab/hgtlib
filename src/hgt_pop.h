@@ -80,6 +80,8 @@ struct hgt_pop_linkage {
     hgt_pop_linkage * parent;
 };
 
+int hgt_pop_calc_fitness(hgt_pop *p, double * fitness);
+
 int hgt_pop_linkage_free(hgt_pop_linkage *l);
 hgt_pop_linkage * hgt_pop_linkage_alloc();
 typedef unsigned long hgt_pop_linkage_find_time_func(hgt_pop_linkage ** linkages, int size);
