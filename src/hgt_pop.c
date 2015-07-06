@@ -530,9 +530,9 @@ int hgt_pop_transfer_at(hgt_pop *p,
 
     if (track_linkage == 1 && donor != receiver) {
         hgt_pop_linkage * parent;
-        parent = p->linkages[donor];
+        parent = p->linkages[donor]->parent;
         hgt_pop_linkage_free(p->linkages[receiver]);
-        p->linkages[receiver] = hgt_pop_linkage_new(parent, parent->birthTime);
+        p->linkages[receiver] = hgt_pop_linkage_new(parent, p->linkages[donor]->birthTime);
     }
 
     return exit_code;
