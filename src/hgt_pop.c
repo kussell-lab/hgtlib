@@ -424,6 +424,50 @@ int hgt_pop_transfer(hgt_pop *p, hgt_pop_params* params, unsigned long frag_len,
                             unsigned long frag_len,
                             unsigned long start);
     unsigned long s, donor, receiver, hs_len, pos;
+    double ratio;
+    // randomly choose a reciver
+    receiver = gsl_rng_uniform_int(r, p->size);
+    // randomly choose a donor.
+    donor = gsl_rng_uniform_int(r, p->size);
+
+    if (donor != receiver) {
+        if (params -> tr_hotspot_num > 0) { // we need to deal hotspots
+            // first calculate total hotspot length, and its ratio to sequence length
+            hs_len = params->tr_hotspot_num * params->tr_hotspot_length;
+            ratio = (double) hs_len / (double) params->seq_len;
+            
+            // we need to decise a mutation is happened inside hotspot or outside
+            // we flip a coin
+            double v = gsl_rng_uniform(r);
+            if (v < (1-ratio)/(1+(params->tr_hotspot_ratio - 1)*ratio)) { // outside hotspot
+                // we randomly choose a position from sites outside hotspots
+                pos = gsl_rng_uniform_int(r, params->seq_len - hs_len);
+                // and then search the absolute position on the genome
+                s = search_region(pos, params->tr_hotspots, params->tr_hotspot_num, 0);
+            } else {
+                // similarly, we randomly choose a position from hotspots
+                pos = gsl_rng_uniform_int(r, hs_len);
+                // and then search the absolute position on the genome
+                s = search_region(pos, params->tr_hotspots, params->tr_hotspot_num, 1) % params->seq_len;
+            }
+        } else { // otherwise, we just randomly choose a site from the genome.
+            s = gsl_rng_uniform_int(r, params->seq_len);
+        }
+        
+        // do transfer given a genome and a site
+        hgt_pop_transfer_at(p, donor, receiver, frag_len, s);
+    }
+    
+    return EXIT_SUCCESS;
+}
+
+int hgt_pop_transfer_fitness(hgt_pop *p, hgt_pop_params* params, unsigned long frag_len, const gsl_rng* r) {
+    int hgt_pop_transfer_at(hgt_pop *p,
+                            unsigned long donor,
+                            unsigned long receiver,
+                            unsigned long frag_len,
+                            unsigned long start);
+    unsigned long s, donor, receiver, hs_len, pos;
     double ratio, * fitness;
     // randomly choose a reciver
     receiver = gsl_rng_uniform_int(r, p->size);
