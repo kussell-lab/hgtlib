@@ -514,15 +514,28 @@ int hgt_pop_transfer_at(hgt_pop *p,
                         unsigned long frag_len, 
                         unsigned long start)
 {
-    int exit_code;
+    int exit_code, track_linkage;
     exit_code = EXIT_SUCCESS;
-
+    track_linkage = 0;
     if (start + frag_len < p->seq_len) {
         strncpy(p->genomes[receiver]+start, p->genomes[donor]+start, frag_len);
+        if (start == 0) {
+            track_linkage = 1;
+        }
     } else {
         strcpy(p->genomes[receiver]+start, p->genomes[donor]+start);
         strncpy(p->genomes[receiver], p->genomes[donor], start + frag_len - p->seq_len);
+        track_linkage = 1;
     }
+    
+    if (track_linkage == 1 && donor != receiver) {
+        hgt_pop_linkage * parent;
+        parent = p->linkages[donor];
+        hgt_pop_linkage_free(p->linkages[receiver]);
+        p->linkages[donor] = hgt_pop_linkage_new(parent, parent->birthTime);
+        p->linkages[receiver] = hgt_pop_linkage_new(parent, parent->birthTime);
+    }
+
     return exit_code;
 }
 
@@ -551,23 +564,24 @@ int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
     }
 
     // create two new linkages.
-    hgt_pop_linkage * l1, * l2, * parent;
-    l1 = hgt_pop_linkage_alloc();
-    l2 = hgt_pop_linkage_alloc();
-    // assign their parents and set their birth times to current generation.
+    hgt_pop_linkage * parent;
     parent = p->linkages[b];
-    l1->parent = parent;
-    l1->birthTime = p->generation;
-    l2->parent = parent;
-    l2->birthTime = p->generation;
     // increase the number of children of the parent by 2.
     parent->numChildren += 2;
     // locate the new linkages to the array.
-    p->linkages[b] = l1;
-    p->linkages[d] = l2;
+    p->linkages[b] = hgt_pop_linkage_new(parent, p->generation);
+    p->linkages[d] = hgt_pop_linkage_new(parent, p->generation);
 
     free(fitness);
     return EXIT_SUCCESS;
+}
+
+hgt_pop_linkage * hgt_pop_linkage_new(hgt_pop_linkage * parent, unsigned long birthTime) {
+    hgt_pop_linkage * l;
+    l = hgt_pop_linkage_alloc();
+    l->birthTime = birthTime;
+    l->parent = parent;
+    return l;
 }
 
 int hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r) {

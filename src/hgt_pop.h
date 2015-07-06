@@ -84,6 +84,7 @@ int hgt_pop_calc_fitness(hgt_pop *p, double * fitness);
 
 int hgt_pop_linkage_free(hgt_pop_linkage *l);
 hgt_pop_linkage * hgt_pop_linkage_alloc();
+hgt_pop_linkage * hgt_pop_linkage_new(hgt_pop_linkage * parent, unsigned long birthTime);
 typedef unsigned long hgt_pop_linkage_find_time_func(hgt_pop_linkage ** linkages, int size);
 unsigned long hgt_pop_linkage_find_most_rescent_ancestor(hgt_pop_linkage ** linkages, int size);
 unsigned long hgt_pop_linkage_find_most_rescent_coalescence(hgt_pop_linkage ** linkages, int size);
