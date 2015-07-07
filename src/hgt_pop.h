@@ -25,6 +25,7 @@ struct hgt_pop {
     char ** genomes;        // genome sequences
     double *fitness;        // genome fitness
     hgt_pop_linkage ** linkages; // linkages.
+    hgt_pop_linkage ** locus_linkages; // locus linkages.
     
     int ** transfer_hotspots; // transfer hotspots
     

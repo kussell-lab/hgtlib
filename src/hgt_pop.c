@@ -40,6 +40,7 @@ hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r) {
     p->genomes = (char **) malloc(p->size * sizeof(char *));
     p->fitness = (double *) malloc(p->size * sizeof(double));
     p->linkages = (hgt_pop_linkage **) malloc(p->size * sizeof(hgt_pop_linkage*));
+    p->locus_linkages = (hgt_pop_linkage **) malloc(p->size * sizeof(hgt_pop_linkage*)); 
     
     // random initilize genomes
     ancestor = malloc((p->seq_len+1) * sizeof(char));
@@ -49,6 +50,7 @@ hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r) {
         strcpy(p->genomes[i], ancestor);
         p->fitness[i] = 0;
         p->linkages[i] = hgt_pop_linkage_alloc();
+        p->locus_linkages[i] = hgt_pop_linkage_alloc();
     }
     
     // define transfer hotspots
@@ -529,10 +531,12 @@ int hgt_pop_transfer_at(hgt_pop *p,
     }
 
     if (track_linkage == 1 && donor != receiver) {
-        hgt_pop_linkage * parent;
-        parent = p->linkages[donor]->parent;
-        hgt_pop_linkage_free(p->linkages[receiver]);
-        p->linkages[receiver] = hgt_pop_linkage_new(parent, p->linkages[donor]->birthTime);
+        hgt_pop_linkage * locus_parent;
+        unsigned long generation;
+        locus_parent = p->locus_linkages[donor]->parent;
+        generation = p->locus_linkages[donor]->birthTime;
+        hgt_pop_linkage_free(p->locus_linkages[receiver]);
+        p->locus_linkages[receiver] = hgt_pop_linkage_new(locus_parent, generation);
     }
 
     return exit_code;
@@ -560,16 +564,21 @@ int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
     // free the linkage of the dead one.
     if (b != d) {
         hgt_pop_linkage_free(p->linkages[d]);
+        hgt_pop_linkage_free(p->locus_linkages[d]);
     }
 
     // create two new linkages.
-    hgt_pop_linkage * parent;
+    hgt_pop_linkage * parent, * locus_parent;
     parent = p->linkages[b];
+    locus_parent = p->locus_linkages[b];
     // increase the number of children of the parent by 2.
     parent->numChildren += 2;
+    locus_parent->numChildren += 2;
     // locate the new linkages to the array.
     p->linkages[b] = hgt_pop_linkage_new(parent, p->generation);
     p->linkages[d] = hgt_pop_linkage_new(parent, p->generation);
+    p->locus_linkages[b] = hgt_pop_linkage_new(locus_parent, p->generation);
+    p->locus_linkages[d] = hgt_pop_linkage_new(locus_parent, p->generation);
 
     free(fitness);
     return EXIT_SUCCESS;
