@@ -28,6 +28,7 @@ void hgt_cov_result_free(hgt_cov_result *r) {
     free(r->pxpy);
     free(r->scov);
     free(r->rcov);
+    free(r->tcov);
     free(r);
 }
 

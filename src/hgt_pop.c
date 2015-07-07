@@ -508,6 +508,8 @@ int hgt_pop_transfer_fitness(hgt_pop *p, hgt_pop_params* params, unsigned long f
         // do transfer given a genome and a site
         hgt_pop_transfer_at(p, donor, receiver, frag_len, s);
     }
+
+    free(fitness);
     
     return EXIT_SUCCESS;
 }
@@ -883,6 +885,8 @@ int hgt_pop_calc_cov_all(hgt_cov_result *result, hgt_pop *p) {
     for (i = 0; i < matrix_size; i++) {
         free(matrix[i]);
     }
+
+    free(matrix);
     
     return EXIT_SUCCESS;
 }
