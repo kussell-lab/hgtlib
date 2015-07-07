@@ -937,7 +937,7 @@ double hgt_pop_mean_fitness(hgt_pop *p) {
 int hgt_pop_linkage_free(hgt_pop_linkage * l) {
     hgt_pop_linkage * parent;
 
-    if (l->numChildren < 1) {
+    if (l->numChildren <= 1) {
         if (!l->parent) {
             // obtain pointer to its parent before freeing.
             parent = l->parent;
