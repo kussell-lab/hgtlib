@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
         
         asprintf(&fn, "%s.t2.txt", params->prefix);
         ft2 = fopen(fn, "w");
-        fprintf(ft2, "#t2\tt3\tt4\tq3\tq4\tgenerations\n");
+        fprintf(ft2, "#genome_t2\tgenome_t3\tgenome_t4\tlocus_t2\tlocus_t3\tlocus_t4\tgenome_q3\tgenome_q4\tlocus_q3\tlocus_q4\tgenerations\n");
         
         free(fn);
     }
@@ -277,9 +277,10 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
 
 int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE * fp, int generations, gsl_rng *rng) {
     int write_t2(FILE * fp, unsigned long * res, int dim, int size, unsigned long generations);
-    int i, j, count, dest, tag, linkage_sizes[3], max_linkage;
+    int i, j, count, dim, dest, tag, linkage_sizes[3], max_linkage;
     max_linkage = 3;
-    count = params->sample_size * (2 * max_linkage - 1);
+    dim = (2 * max_linkage - 1) * 2;
+    count = params->sample_size * dim;
     for (i = 0; i < max_linkage; i++) {
         linkage_sizes[i] = i + 2;
     }
@@ -292,10 +293,16 @@ int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE *
     
     for (i = 0; i < params->replicates; i++) {
         for (j = 0; j < max_linkage; j++) {
-            hgt_pop_calc_most_recent_ancestor_time(ps[i], params->sample_size, buf+j*params->sample_size, linkage_sizes[j], rng);
+            hgt_pop_calc_most_recent_ancestor_time(ps[i]->linkages, ps[i]->size, params->sample_size, buf+j*params->sample_size, linkage_sizes[j], rng);
+        }
+        for (j = 0; j < max_linkage; j++) {
+            hgt_pop_calc_most_recent_ancestor_time(ps[i]->locus_linkages, ps[i]->size, params->sample_size, buf+(max_linkage + j)*params->sample_size, linkage_sizes[j], rng);
         }
         for (j = 1; j < max_linkage; j++) {
-            hgt_pop_calc_most_recent_coal_time(ps[i], params->sample_size, buf+(j+2)*params->sample_size, linkage_sizes[j], rng);
+            hgt_pop_calc_most_recent_coal_time(ps[i]->linkages, ps[i]->size, params->sample_size, buf+(max_linkage * 2 + j - 1)*params->sample_size, linkage_sizes[j], rng);
+        }
+        for (j = 1; j < max_linkage; j++) {
+            hgt_pop_calc_most_recent_coal_time(ps[i]->locus_linkages, ps[i]->size, params->sample_size, buf+(max_linkage * 3 - 1 + j - 1)*params->sample_size, linkage_sizes[j], rng);
         }
         if (rank != 0) {
             MPI_Send(buf, count, MPI_UNSIGNED_LONG, dest, tag, MPI_COMM_WORLD);
@@ -305,7 +312,7 @@ int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE *
                     // recieve data from worker nodes.
                     MPI_Recv(buf, count, MPI_UNSIGNED_LONG, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
-                write_t2(fp, buf, 2 * max_linkage - 1, params->sample_size, generations);
+                write_t2(fp, buf, dim, params->sample_size, generations);
             }
         }
     }

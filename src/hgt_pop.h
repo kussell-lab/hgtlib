@@ -89,14 +89,16 @@ hgt_pop_linkage * hgt_pop_linkage_new(hgt_pop_linkage * parent, unsigned long bi
 typedef unsigned long hgt_pop_linkage_find_time_func(hgt_pop_linkage ** linkages, int size);
 unsigned long hgt_pop_linkage_find_most_rescent_ancestor(hgt_pop_linkage ** linkages, int size);
 unsigned long hgt_pop_linkage_find_most_rescent_coalescence(hgt_pop_linkage ** linkages, int size);
-int hgt_pop_calc_coal_time(hgt_pop *p, 
+int hgt_pop_calc_coal_time(
+    hgt_pop_linkage **pop_linkages, 
+    int size, 
     unsigned long sample_size, 
     unsigned long *res, 
     int linkage_size, 
     hgt_pop_linkage_find_time_func find_func,
     const gsl_rng *r);
-int hgt_pop_calc_most_recent_coal_time(hgt_pop *p, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
-int hgt_pop_calc_most_recent_ancestor_time(hgt_pop *p, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
+int hgt_pop_calc_most_recent_coal_time(hgt_pop_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
+int hgt_pop_calc_most_recent_ancestor_time(hgt_pop_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
 
 hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r);
 hgt_pop * hgt_pop_copy(hgt_pop * p);

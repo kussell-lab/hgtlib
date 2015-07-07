@@ -1049,24 +1049,24 @@ unsigned long hgt_pop_linkage_find_most_rescent_coalescence(hgt_pop_linkage ** l
     }
 }
 
-int hgt_pop_calc_coal_time(hgt_pop *p, 
+int hgt_pop_calc_coal_time(hgt_pop_linkage ** pop_linkages, int size, 
     unsigned long sample_size, 
     unsigned long *res, 
     int linkage_size, 
     hgt_pop_linkage_find_time_func find_func,
     const gsl_rng *r) {
 
-    int i, j, a[linkage_size], b[p->size];
-    for (i = 0; i < p->size; i++) {
+    int i, j, a[linkage_size], b[size];
+    for (i = 0; i < size; i++) {
         b[i] = i;
     }
 
     hgt_pop_linkage * linkages[linkage_size];
 
     for (i = 0; i < sample_size; i++) {
-        gsl_ran_choose(r, a, linkage_size, b, p->size, sizeof(int));
+        gsl_ran_choose(r, a, linkage_size, b, size, sizeof(int));
         for (j = 0; j < linkage_size; j++) {
-            linkages[j] = p->linkages[a[j]];
+            linkages[j] = pop_linkages[a[j]];
         }
         res[i] = find_func(linkages, linkage_size);
     }
@@ -1074,12 +1074,12 @@ int hgt_pop_calc_coal_time(hgt_pop *p,
     return EXIT_SUCCESS;
 }
 
-int hgt_pop_calc_most_recent_coal_time(hgt_pop *p, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r) {
-    return hgt_pop_calc_coal_time(p, sample_size, res, linkage_size, hgt_pop_linkage_find_most_rescent_coalescence, r);
+int hgt_pop_calc_most_recent_coal_time(hgt_pop_linkage ** pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r) {
+    return hgt_pop_calc_coal_time(pop_linkages, size, sample_size, res, linkage_size, hgt_pop_linkage_find_most_rescent_coalescence, r);
 }
 
-int hgt_pop_calc_most_recent_ancestor_time(hgt_pop *p, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r) {
-    return hgt_pop_calc_coal_time(p, sample_size, res, linkage_size, hgt_pop_linkage_find_most_rescent_ancestor, r);
+int hgt_pop_calc_most_recent_ancestor_time(hgt_pop_linkage ** pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r) {
+    return hgt_pop_calc_coal_time(pop_linkages, size, sample_size, res, linkage_size, hgt_pop_linkage_find_most_rescent_ancestor, r);
 }
 
 int hgt_pop_calc_fitness(hgt_pop *p, double * fitness) {
