@@ -118,10 +118,12 @@ int hgt_pop_free(hgt_pop * p) {
     for (i = 0; i < p->size; i ++) {
         free(p->genomes[i]);
         free(p->linkages[i]);
+        free(p->locus_linkages[i]);
     }
     free(p->genomes);
     free(p->fitness);
     free(p->linkages);
+    free(p->locus_linkages);
     if (p->cache_allocated != 0) {
         free(p->survived);
         free(p->new_born);
