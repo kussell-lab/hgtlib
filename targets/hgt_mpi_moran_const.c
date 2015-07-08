@@ -71,8 +71,8 @@ int main(int argc, char *argv[]) {
         p4vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
         covmeans = hgt_utils_alloc_stat_means(params->maxl+1, 4);
         covvars = hgt_utils_alloc_stat_variance(params->maxl+1, 4);
-        t2means = hgt_utils_alloc_stat_means(3, 2);
-        t2vars = hgt_utils_alloc_stat_variance(3, 2);
+        t2means = hgt_utils_alloc_stat_means(2, 3);
+        t2vars = hgt_utils_alloc_stat_variance(2, 3);
     }
     
     FILE * fp2; // output p2
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
             write_pxy(fp4, params->maxl, p4means, p4vars, (i+1)*params->generations);
             write_cov(fpcov, params->maxl, covmeans, covvars, (i+1)*params->generations);
             write_ks(fpks, params->maxl, covmeans, covvars, (i+1)*params->generations);
-            write_t2(ft2, t2means, t2vars, 3, 2, (i+1)*params->generations);
+            write_t2(ft2, t2means, t2vars, 2, 3, (i+1)*params->generations);
             
             
             hgt_utils_clean_stat_means(p2means, params->maxl, 4);
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
         }
     }
     
-    write_pops(ps, params, rank, numprocs);
+    // write_pops(ps, params, rank, numprocs);
     
     if (rank == 0) {
         
@@ -168,8 +168,8 @@ int main(int argc, char *argv[]) {
         hgt_utils_free_stat_variances(p4vars, params->maxl, 4);
         hgt_utils_free_stat_means(covmeans, params->maxl+1, 4);
         hgt_utils_free_stat_variances(covvars, params->maxl+1, 4);
-        hgt_utils_free_stat_means(t2means, 3, 2);
-        hgt_utils_free_stat_variances(t2vars, 3, 2);
+        hgt_utils_free_stat_means(t2means, 2, 3);
+        hgt_utils_free_stat_variances(t2vars, 2, 3);
         fclose(fp2);
         fclose(fp3);
         fclose(fp4);
@@ -330,18 +330,18 @@ int t2_calc(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, hgt_pop **ps,
     return EXIT_SUCCESS;
 }
 
-int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int dim, int max_linkage, int sample_size, unsigned long generation) {
+int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int max_linkage, int dim, int sample_size, unsigned long generation) {
     int i, j, k;
     unsigned long v, t;
-    for (k = 0; k < sample_size; k++) {
-        for (i = 0; i < dim; i++) {
-            for (j = 0; j < max_linkage; j++) {
-                v =buf[(dim*max_linkage*k) + max_linkage * i + j];
-                if (v > 0) {
+    for (i = 0; i < dim; i++) {
+        for (j = 0; j < max_linkage; j++) {
+            for (k = 0; k < sample_size; k++) {
+                 v =buf[(i*max_linkage + j) * sample_size + k];
+                 if (v > 0) {
                     t = generation - v;
-                    hgt_stat_mean_increment(t2means[i][j], (double) t);
-                    hgt_stat_variance_increment(t2vars[i][j], (double) t);
-                }
+                    hgt_stat_mean_increment(t2means[i][j], (double)t);
+                    hgt_stat_variance_increment(t2vars[i][j], (double)t);
+                 }
             }
         }
     }
