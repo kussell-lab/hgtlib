@@ -25,7 +25,8 @@ int main(int argc, char *argv[]) {
     int write_pxy(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     int write_cov(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     int write_ks(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
-    int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE * fp, int generations, gsl_rng *rng);
+    int t2_calc(hgt_stat_mean ***t2mean, hgt_stat_variance ***t2var, hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE * fp, int generations, gsl_rng *rng);
+    int write_t2(FILE *fp, hgt_stat_mean ***means, hgt_stat_variance ***vars, int dim, int size, unsigned long gen);
     
     int numprocs, rank, exit_code;
     MPI_Init(&argc, &argv);
@@ -58,6 +59,8 @@ int main(int argc, char *argv[]) {
     hgt_stat_variance ***p4vars;
     hgt_stat_mean ***covmeans;
     hgt_stat_variance ***covvars;
+    hgt_stat_mean ***t2means;
+    hgt_stat_variance ***t2vars;
     
     if (rank == 0) {
         p2means = hgt_utils_alloc_stat_means(params->maxl, 4);
@@ -68,6 +71,8 @@ int main(int argc, char *argv[]) {
         p4vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
         covmeans = hgt_utils_alloc_stat_means(params->maxl+1, 4);
         covvars = hgt_utils_alloc_stat_variance(params->maxl+1, 4);
+        t2means = hgt_utils_alloc_stat_means(3, 2);
+        t2vars = hgt_utils_alloc_stat_variance(3, 2);
     }
     
     FILE * fp2; // output p2
@@ -105,7 +110,7 @@ int main(int argc, char *argv[]) {
 
         asprintf(&fn, "%s.t2.txt", params->prefix);
         ft2 = fopen(fn, "w");
-        fprintf(ft2, "#genome_t2\tgenome_t3\tgenome_t4\tlocus_t2\tlocus_t3\tlocus_t4\tgenome_q3\tgenome_q4\tlocus_q3\tlocus_q4\tgenerations\n");
+        fprintf(ft2, "#genome_t2\tgenome_t3\tgenome_t4\tlocus_t2\tlocus_t3\tlocus_t4\tgenome_t2_var\tgenome_t3_var\tgenome_t4_var\tlocus_t2_var\tlocus_t3_var\tlocus_t4_var\tgenerations\n");
         free(fn);
     }
     
@@ -123,7 +128,7 @@ int main(int argc, char *argv[]) {
         pxy_calc(p4means, p4vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p4, rng);
         
         cov_calc(covmeans, covvars, ps, params, rank, numprocs, rng);
-        t2_calc(ps, params, rank, numprocs, ft2, (i+1)*params->generations, rng);
+        t2_calc(t2means, t2vars, ps, params, rank, numprocs, ft2, (i+1)*params->generations, rng);
         
         if (rank == 0) {
             printf("Ks = %g, Expected = %g, Std Err = %g\n", hgt_stat_mean_get(p2means[0][3]), hgt_predict_ks_moran(params->size, params->mu_rate, params->tr_rate, params->frag_len), sqrt(hgt_stat_variance_get(p2vars[0][3])/(double)hgt_stat_variance_get_n(p2vars[0][3])));
@@ -132,6 +137,8 @@ int main(int argc, char *argv[]) {
             write_pxy(fp4, params->maxl, p4means, p4vars, (i+1)*params->generations);
             write_cov(fpcov, params->maxl, covmeans, covvars, (i+1)*params->generations);
             write_ks(fpks, params->maxl, covmeans, covvars, (i+1)*params->generations);
+            write_t2(ft2, t2means, t2vars, 3, 2, (i+1)*params->generations);
+            
             
             hgt_utils_clean_stat_means(p2means, params->maxl, 4);
             hgt_utils_clean_stat_means(p3means, params->maxl, 4);
@@ -161,6 +168,8 @@ int main(int argc, char *argv[]) {
         hgt_utils_free_stat_variances(p4vars, params->maxl, 4);
         hgt_utils_free_stat_means(covmeans, params->maxl+1, 4);
         hgt_utils_free_stat_variances(covvars, params->maxl+1, 4);
+        hgt_utils_free_stat_means(t2means, 3, 2);
+        hgt_utils_free_stat_variances(t2vars, 3, 2);
         fclose(fp2);
         fclose(fp3);
         fclose(fp4);
@@ -279,12 +288,12 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
     return EXIT_SUCCESS;
 }
 
-int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE * fp, int generations, gsl_rng *rng) {
-    int write_t2(FILE * fp, unsigned long * res, int dim, int size, unsigned long generations);
+int t2_calc(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE * fp, int generation, gsl_rng *rng) {
+    int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int dim, int max_linkage, int sample_size, unsigned long generation);
     int i, j, count, dim, dest, tag, linkage_sizes[3], max_linkage;
     max_linkage = 3;
-    dim = (2 * max_linkage - 1) * 2;
-    count = params->sample_size * dim;
+    dim = 2;
+    count = params->sample_size * dim * max_linkage;
     for (i = 0; i < max_linkage; i++) {
         linkage_sizes[i] = i + 2;
     }
@@ -302,12 +311,7 @@ int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE *
         for (j = 0; j < max_linkage; j++) {
             hgt_pop_calc_most_recent_ancestor_time(ps[i]->locus_linkages, ps[i]->size, params->sample_size, buf+(max_linkage + j)*params->sample_size, linkage_sizes[j], rng);
         }
-        for (j = 1; j < max_linkage; j++) {
-            hgt_pop_calc_most_recent_coal_time(ps[i]->linkages, ps[i]->size, params->sample_size, buf+(max_linkage * 2 + j - 1)*params->sample_size, linkage_sizes[j], rng);
-        }
-        for (j = 1; j < max_linkage; j++) {
-            hgt_pop_calc_most_recent_coal_time(ps[i]->locus_linkages, ps[i]->size, params->sample_size, buf+(max_linkage * 3 - 1 + j - 1)*params->sample_size, linkage_sizes[j], rng);
-        }
+        
         if (rank != 0) {
             MPI_Send(buf, count, MPI_UNSIGNED_LONG, dest, tag, MPI_COMM_WORLD);
         } else {
@@ -316,7 +320,9 @@ int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE *
                     // recieve data from worker nodes.
                     MPI_Recv(buf, count, MPI_UNSIGNED_LONG, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
-                write_t2(fp, buf, dim, params->sample_size, generations);
+                
+                
+                update_t2(t2means, t2vars, buf, max_linkage, dim, params->sample_size, generation);
             }
         }
     }
@@ -324,28 +330,22 @@ int t2_calc(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE *
     return EXIT_SUCCESS;
 }
 
-int write_t2(FILE * fp, unsigned long * res, int dim, int size, unsigned long generations) {
-    int i, j, good;
+int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int dim, int max_linkage, int sample_size, unsigned long generation) {
+    int i, j, k;
     unsigned long v, t;
-    for (i = 0; i < size; i++) {
-        good = 1;
-        for (j = 0; j < dim; j++){
-            v = res[j*size + i];
-            if (v <= 0) {
-                good = 0;
-                break;
+    for (k = 0; k < sample_size; k++) {
+        for (i = 0; i < dim; i++) {
+            for (j = 0; j < max_linkage; j++) {
+                v =buf[(dim*max_linkage*k) + max_linkage * i + j];
+                if (v > 0) {
+                    t = generation - v;
+                    hgt_stat_mean_increment(t2means[i][j], (double) t);
+                    hgt_stat_variance_increment(t2vars[i][j], (double) t);
+                }
             }
-        }
-
-        if (good) {
-            for (j = 0; j < dim; j++) {
-                v = res[j*size + i];
-                t = generations - v;
-                fprintf(fp, "%lu\t", t);
-            }
-            fprintf(fp, "%lu\n", generations);
         }
     }
+    
     return EXIT_SUCCESS;
 }
 
@@ -415,6 +415,28 @@ bstring to_json(hgt_pop ** ps, hgt_pop_params * params) {
     }
     
     return b;
+}
+
+int write_t2(FILE *fp, hgt_stat_mean ***means, hgt_stat_variance ***vars, int dim, int size, unsigned long gen) {
+    int i, j;
+    double v;
+    for (i = 0; i < dim; i++) {
+        for (j = 0; j < size; j++) {
+            v = hgt_stat_mean_get(means[i][j]);
+            fprintf(fp, "%g\t", v);
+        }
+    }
+    
+    for (i = 0; i < dim; i++) {
+        for (j = 0; j < size; j++) {
+            v = hgt_stat_variance_get(vars[i][j]);
+            fprintf(fp, "%g\t", v);
+        }
+    }
+    
+    fprintf(fp, "%ld\t%lu\n", hgt_stat_mean_get_n(means[0][0]), gen);
+    
+    return EXIT_SUCCESS;
 }
 
 int write_pxy(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen) {
