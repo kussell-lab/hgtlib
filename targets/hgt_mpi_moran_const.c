@@ -357,7 +357,6 @@ int write_pops(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs) {
     rc = bstr2cstr(b, '\n');
     if (rank != 0) {
         MPI_Send(rc, blength(b), MPI_CHAR, dest, tag, MPI_COMM_WORLD);
-        bdestroy(b);
         free(rc);
     } else {
         char *fn;
@@ -389,6 +388,7 @@ int write_pops(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs) {
         fclose(fp);
         free(fn);
     }
+    bdestroy(b);
     
     return EXIT_SUCCESS;
 }

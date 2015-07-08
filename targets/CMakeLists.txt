@@ -1,7 +1,7 @@
 find_package(MPI REQUIRED)
 find_package(GSL REQUIRED)
 find_package(ArgTable REQUIRED)
-set(CMAKE_C_FLAGS "-pthread -pg")
+set(CMAKE_C_FLAGS "-pthread -pg -g")
 include_directories(${GSL_INCLUDE_DIR} ${ARGTABLE_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} . ../src ../bstrlib)
 set(LIBS ${LIBS} ${MPI_LIBRARIES} ${GSL_LIBRARIES} ${ARGTABLE_LIBRARIES} hgt bstrlib)
 MESSAGE(STATUS ${MPI_INCLUDE_PATH})

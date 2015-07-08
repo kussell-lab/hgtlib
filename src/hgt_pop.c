@@ -49,8 +49,8 @@ hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r) {
         p->genomes[i] = malloc((p->seq_len+1) * sizeof(char));
         strcpy(p->genomes[i], ancestor);
         p->fitness[i] = 0;
-        p->linkages[i] = hgt_pop_linkage_alloc();
-        p->locus_linkages[i] = hgt_pop_linkage_alloc();
+        p->linkages[i] = hgt_pop_linkage_new(NULL, p->generation);
+        p->locus_linkages[i] = hgt_pop_linkage_new(NULL, p->generation);
     }
     
     // define transfer hotspots
@@ -117,9 +117,10 @@ int hgt_pop_free(hgt_pop * p) {
     int i;
     for (i = 0; i < p->size; i ++) {
         free(p->genomes[i]);
-        free(p->linkages[i]);
-        free(p->locus_linkages[i]);
+        hgt_pop_linkage_free(p->linkages[i]);
+        hgt_pop_linkage_free(p->locus_linkages[i]);
     }
+
     free(p->genomes);
     free(p->fitness);
     free(p->linkages);
@@ -135,6 +136,7 @@ int hgt_pop_free(hgt_pop * p) {
 }
 
 char *hgt_pop_to_json(hgt_pop *p, hgt_pop_params *params){
+    char *c;
     bstring b = bfromcstr("");
     bformata(b, "{\n");
     bformata(b, "\"Size\": %ld,\n", params->size);
@@ -153,8 +155,10 @@ char *hgt_pop_to_json(hgt_pop *p, hgt_pop_params *params){
         }
     }
     bformata(b, "]\n}\n");
+    c = bstr2cstr(b, '\n');
+    bdestroy(b);
     
-    return bstr2cstr(b, '\n');
+    return c;
 }
 
 // define handler for parsing configure file
@@ -569,20 +573,16 @@ int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
     if (b != d) {
         hgt_pop_linkage_free(p->linkages[d]);
         hgt_pop_linkage_free(p->locus_linkages[d]);
+        // create two new linkages.
+        hgt_pop_linkage * parent, * locus_parent;
+        parent = p->linkages[b];
+        locus_parent = p->locus_linkages[b];
+        // locate the new linkages to the array.
+        p->linkages[b] = hgt_pop_linkage_new(parent, p->generation);
+        p->linkages[d] = hgt_pop_linkage_new(parent, p->generation);
+        p->locus_linkages[b] = hgt_pop_linkage_new(locus_parent, p->generation);
+        p->locus_linkages[d] = hgt_pop_linkage_new(locus_parent, p->generation);
     }
-
-    // create two new linkages.
-    hgt_pop_linkage * parent, * locus_parent;
-    parent = p->linkages[b];
-    locus_parent = p->locus_linkages[b];
-    // increase the number of children of the parent by 2.
-    parent->numChildren += 2;
-    locus_parent->numChildren += 2;
-    // locate the new linkages to the array.
-    p->linkages[b] = hgt_pop_linkage_new(parent, p->generation);
-    p->linkages[d] = hgt_pop_linkage_new(parent, p->generation);
-    p->locus_linkages[b] = hgt_pop_linkage_new(locus_parent, p->generation);
-    p->locus_linkages[d] = hgt_pop_linkage_new(locus_parent, p->generation);
 
     free(fitness);
     return EXIT_SUCCESS;
@@ -940,18 +940,14 @@ double hgt_pop_mean_fitness(hgt_pop *p) {
 
 int hgt_pop_linkage_free(hgt_pop_linkage * l) {
     hgt_pop_linkage * parent;
-
-    if (l->numChildren <= 1) {
-        if (!l->parent) {
-            // obtain pointer to its parent before freeing.
-            parent = l->parent;
-            if (!parent) {
-                return EXIT_SUCCESS;
-            }
+    parent = l->parent;
+    if (l->numChildren < 1) {
+        if (parent) {
             // reduce the number of children of the parent by 1,
             // and try to free the parent.
-            parent -> numChildren--;
+            parent->numChildren--;
             hgt_pop_linkage_free(parent);
+
         }
         free(l);
     }
