@@ -1,5 +1,6 @@
 find_package(GSL REQUIRED)
 find_package(ArgTable REQUIRED)
+set(CMAKE_C_FLAGS "-pthread -pg -g")
 include_directories(. ${GSL_INCLUDE_DIR} ${ARGTABLE_INCLUDE_DIRS} ../bstrlib)
 file(GLOB hgt_SRC
     "*.h"

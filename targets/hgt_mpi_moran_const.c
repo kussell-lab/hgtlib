@@ -81,27 +81,31 @@ int main(int argc, char *argv[]) {
         asprintf(&fn, "%s.p2.txt", params->prefix);
         fp2 = fopen(fn, "w");
         fprintf(fp2, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
-        
+        free(fn);
+
         asprintf(&fn, "%s.p3.txt", params->prefix);
         fp3 = fopen(fn, "w");
         fprintf(fp3, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
-        
+        free(fn);
+
         asprintf(&fn, "%s.p4.txt", params->prefix);
         fp4 = fopen(fn, "w");
         fprintf(fp4, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
-        
+        free(fn);
+
         asprintf(&fn, "%s.cov.txt", params->prefix);
         fpcov = fopen(fn, "w");
         fprintf(fpcov, "#l\tscov\trcov\tpxpy\ttcov\tscov var\trcov var\tpxpy var\ttcov var\tsample n\tgenerations\n");
-        
+        free(fn);
+
         asprintf(&fn, "%s.ks.txt", params->prefix);
         fpks = fopen(fn, "w");
         fprintf(fpks, "#ks\tvd\tvar ks\tvar vd\tgenerations\n");
-        
+        free(fn);
+
         asprintf(&fn, "%s.t2.txt", params->prefix);
         ft2 = fopen(fn, "w");
         fprintf(ft2, "#genome_t2\tgenome_t3\tgenome_t4\tlocus_t2\tlocus_t3\tlocus_t4\tgenome_q3\tgenome_q4\tlocus_q3\tlocus_q4\tgenerations\n");
-        
         free(fn);
     }
     
@@ -155,8 +159,8 @@ int main(int argc, char *argv[]) {
         hgt_utils_free_stat_variances(p2vars, params->maxl, 4);
         hgt_utils_free_stat_variances(p3vars, params->maxl, 4);
         hgt_utils_free_stat_variances(p4vars, params->maxl, 4);
-        hgt_utils_free_stat_means(covmeans, params->maxl+1, 3);
-        hgt_utils_free_stat_variances(covvars, params->maxl+1, 3);
+        hgt_utils_free_stat_means(covmeans, params->maxl+1, 4);
+        hgt_utils_free_stat_variances(covvars, params->maxl+1, 4);
         fclose(fp2);
         fclose(fp3);
         fclose(fp4);
@@ -357,7 +361,6 @@ int write_pops(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs) {
     rc = bstr2cstr(b, '\n');
     if (rank != 0) {
         MPI_Send(rc, blength(b), MPI_CHAR, dest, tag, MPI_COMM_WORLD);
-        bdestroy(b);
         free(rc);
     } else {
         char *fn;
@@ -389,18 +392,22 @@ int write_pops(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs) {
         fclose(fp);
         free(fn);
     }
+    bdestroy(b);
     
     return EXIT_SUCCESS;
 }
 
 bstring to_json(hgt_pop ** ps, hgt_pop_params * params) {
     int i;
+    char *c;
     bstring b;
     b = bfromcstr("");
     
     for (i = 0; i < params->replicates; i ++) {
         hgt_pop * pop = ps[i];
-        bformata(b, "%s", hgt_pop_to_json(pop, params));
+        c = hgt_pop_to_json(pop, params);
+        bformata(b, "%s", c);
+        free(c);
         if (i < params->replicates-1)
         {
             bformata(b, ",\n");

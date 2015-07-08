@@ -181,6 +181,7 @@ int hgt_utils_Roulette_Wheel_select(double * weights, int size, const gsl_rng *r
     int i;
     double total, v, accu;
     total = 0;
+    v = 0;
     for (i = 0; i < size; i++) {
         total += weights[i];
     }
