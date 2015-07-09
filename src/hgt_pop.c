@@ -991,7 +991,7 @@ unsigned long hgt_pop_linkage_find_most_rescent_ancestor(hgt_pop_linkage ** link
         return 0;
     } else {
         if (found == 1) {
-            return parent->birthTime;
+            return linkages[0]->birthTime;
         } else {
             // find the one that has max birth time.
             maxBirthTime = linkages[0]->birthTime;
@@ -1012,7 +1012,7 @@ unsigned long hgt_pop_linkage_find_most_rescent_ancestor(hgt_pop_linkage ** link
 unsigned long hgt_pop_linkage_find_most_rescent_coalescence(hgt_pop_linkage ** linkages, int size) {
     int i, j;
     int bad, maxIndex;
-    unsigned long maxBirthTime;
+    unsigned long birthTime, maxBirthTime;
     hgt_pop_linkage * parent;
     
     bad = 0;
@@ -1030,8 +1030,9 @@ unsigned long hgt_pop_linkage_find_most_rescent_coalescence(hgt_pop_linkage ** l
         for (i = 0; i < size; i ++) {
             for (j = i+1; j < size; j++) {
                 if (linkages[i]->parent == linkages[j]->parent) {
-                    if (maxBirthTime < linkages[i]->parent->birthTime) {
-                        maxBirthTime = linkages[i]->parent->birthTime;
+			birthTime = linkages[i]->birthTime;
+                    if (maxBirthTime < birthTime) {
+                        maxBirthTime = birthTime;
                     }
                 }
             }

@@ -336,7 +336,7 @@ int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned lo
             for (k = 0; k < sample_size; k++) {
                  v =buf[(i*max_linkage + j) * sample_size + k];
                  if (v > 0) {
-                    t = generation - v;
+                    t = generation - v + 1;
                     hgt_stat_mean_increment(t2means[i][j], (double)t);
                     hgt_stat_variance_increment(t2vars[i][j], (double)t);
                  }
