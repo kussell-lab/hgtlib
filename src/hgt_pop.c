@@ -569,19 +569,22 @@ int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
         p->fitness[d] = p->fitness[b];
     }
     
-    // free the linkage of the dead one.
+    hgt_pop_linkage * parent, * locus_parent;
+    parent = p->linkages[b];
+    locus_parent = p->locus_linkages[b];
     if (b != d) {
+        // free the dead linkages.
         hgt_pop_linkage_free(p->linkages[d]);
         hgt_pop_linkage_free(p->locus_linkages[d]);
-        // create two new linkages.
-        hgt_pop_linkage * parent, * locus_parent;
-        parent = p->linkages[b];
-        locus_parent = p->locus_linkages[b];
         // locate the new linkages to the array.
         p->linkages[b] = hgt_pop_linkage_new(parent, p->generation);
         p->linkages[d] = hgt_pop_linkage_new(parent, p->generation);
         p->locus_linkages[b] = hgt_pop_linkage_new(locus_parent, p->generation);
         p->locus_linkages[d] = hgt_pop_linkage_new(locus_parent, p->generation);
+    } else {
+        // just create a new linkage.
+        p->linkages[b] = hgt_pop_linkage_new(parent, p->generation);
+        p->locus_linkages[b] = hgt_pop_linkage_new(locus_parent, p->generation);
     }
 
     free(fitness);

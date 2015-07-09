@@ -320,8 +320,6 @@ int t2_calc(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, hgt_pop **ps,
                     // recieve data from worker nodes.
                     MPI_Recv(buf, count, MPI_UNSIGNED_LONG, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
-                
-                
                 update_t2(t2means, t2vars, buf, max_linkage, dim, params->sample_size, generation);
             }
         }
