@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     if (exit_code == EXIT_FAILURE) {
         goto exit;
     }
-    
+    params->linkage_size = params->frag_len;
     if (rank == 0) {
         hgt_pop_params_printf(params, stdout);
     }
@@ -62,6 +62,7 @@ int main(int argc, char *argv[]) {
     hgt_stat_mean ***t2means;
     hgt_stat_variance ***t2vars;
     
+    int linkage_dim = params->linkage_size + 1;
     if (rank == 0) {
         p2means = hgt_utils_alloc_stat_means(params->maxl, 4);
         p2vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
@@ -71,8 +72,8 @@ int main(int argc, char *argv[]) {
         p4vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
         covmeans = hgt_utils_alloc_stat_means(params->maxl+1, 4);
         covvars = hgt_utils_alloc_stat_variance(params->maxl+1, 4);
-        t2means = hgt_utils_alloc_stat_means(2, 3);
-        t2vars = hgt_utils_alloc_stat_variance(2, 3);
+        t2means = hgt_utils_alloc_stat_means(linkage_dim, 3);
+        t2vars = hgt_utils_alloc_stat_variance(linkage_dim, 3);
     }
     
     FILE * fp2; // output p2
@@ -137,7 +138,7 @@ int main(int argc, char *argv[]) {
             write_pxy(fp4, params->maxl, p4means, p4vars, (i+1)*params->generations);
             write_cov(fpcov, params->maxl, covmeans, covvars, (i+1)*params->generations);
             write_ks(fpks, params->maxl, covmeans, covvars, (i+1)*params->generations);
-            write_t2(ft2, t2means, t2vars, 2, 3, (i+1)*params->generations);
+            write_t2(ft2, t2means, t2vars, linkage_dim, 3, (i+1)*params->generations);
             
             
             hgt_utils_clean_stat_means(p2means, params->maxl, 4);
@@ -148,6 +149,8 @@ int main(int argc, char *argv[]) {
             hgt_utils_clean_stat_variances(p4vars, params->maxl, 4);
             hgt_utils_clean_stat_means(covmeans, params->maxl+1, 3);
             hgt_utils_clean_stat_variances(covvars, params->maxl+1, 3);
+            hgt_utils_clean_stat_means(t2means, linkage_dim, 3);
+            hgt_utils_clean_stat_variances(t2vars, linkage_dim, 3);
         }
         
         end = clock();
@@ -168,8 +171,8 @@ int main(int argc, char *argv[]) {
         hgt_utils_free_stat_variances(p4vars, params->maxl, 4);
         hgt_utils_free_stat_means(covmeans, params->maxl+1, 4);
         hgt_utils_free_stat_variances(covvars, params->maxl+1, 4);
-        hgt_utils_free_stat_means(t2means, 2, 3);
-        hgt_utils_free_stat_variances(t2vars, 2, 3);
+        hgt_utils_free_stat_means(t2means, linkage_dim, 3);
+        hgt_utils_free_stat_variances(t2vars, linkage_dim, 3);
         fclose(fp2);
         fclose(fp3);
         fclose(fp4);
@@ -290,9 +293,9 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
 
 int t2_calc(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE * fp, int generation, gsl_rng *rng) {
     int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int dim, int max_linkage, int sample_size, unsigned long generation);
-    int i, j, count, dim, dest, tag, linkage_sizes[3], max_linkage;
+    int i, j, k, count, dim, dest, tag, linkage_sizes[3], max_linkage;
     max_linkage = 3;
-    dim = 2;
+    dim = 1 + params->linkage_size;
     count = params->sample_size * dim * max_linkage;
     for (i = 0; i < max_linkage; i++) {
         linkage_sizes[i] = i + 2;
@@ -305,11 +308,13 @@ int t2_calc(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, hgt_pop **ps,
     tag = 0;
     
     for (i = 0; i < params->replicates; i++) {
-        for (j = 0; j < max_linkage; j++) {
-            hgt_pop_calc_most_recent_ancestor_time(ps[i]->linkages, ps[i]->size, params->sample_size, buf+j*params->sample_size, linkage_sizes[j], rng);
+        for (k = 0; k < params->linkage_size; k++) {
+            for (j = 0; j < max_linkage; j++) {
+                hgt_pop_calc_most_recent_ancestor_time(ps[i]->locus_linkages[k], ps[i]->size, params->sample_size, buf+(max_linkage * k + j) * params->sample_size, linkage_sizes[j], rng);
+            }
         }
         for (j = 0; j < max_linkage; j++) {
-            hgt_pop_calc_most_recent_ancestor_time(ps[i]->locus_linkages, ps[i]->size, params->sample_size, buf+(max_linkage + j)*params->sample_size, linkage_sizes[j], rng);
+            hgt_pop_calc_most_recent_ancestor_time(ps[i]->linkages, ps[i]->size, params->sample_size, buf+(max_linkage * params->linkage_size + j) * params->sample_size, linkage_sizes[j], rng);
         }
         
         if (rank != 0) {
@@ -419,20 +424,18 @@ int write_t2(FILE *fp, hgt_stat_mean ***means, hgt_stat_variance ***vars, int di
     int i, j;
     double v;
     for (i = 0; i < dim; i++) {
+        fprintf(fp, "%d\t", i);
         for (j = 0; j < size; j++) {
             v = hgt_stat_mean_get(means[i][j]);
             fprintf(fp, "%g\t", v);
         }
-    }
-    
-    for (i = 0; i < dim; i++) {
+
         for (j = 0; j < size; j++) {
             v = hgt_stat_variance_get(vars[i][j]);
             fprintf(fp, "%g\t", v);
         }
+        fprintf(fp, "%ld\t%lu\n", hgt_stat_mean_get_n(means[0][0]), gen);
     }
-    
-    fprintf(fp, "%ld\t%lu\n", hgt_stat_mean_get_n(means[0][0]), gen);
     
     return EXIT_SUCCESS;
 }

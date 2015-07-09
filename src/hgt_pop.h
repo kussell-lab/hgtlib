@@ -25,7 +25,7 @@ struct hgt_pop {
     char ** genomes;        // genome sequences
     double *fitness;        // genome fitness
     hgt_pop_linkage ** linkages; // linkages.
-    hgt_pop_linkage ** locus_linkages; // locus linkages.
+    hgt_pop_linkage *** locus_linkages; // locus linkages.
     
     int ** transfer_hotspots; // transfer hotspots
     
@@ -33,6 +33,7 @@ struct hgt_pop {
     unsigned long * survived;
     unsigned long * new_born;
     int cache_allocated;
+    int linkage_size;
 };
 
 struct hgt_pop_params {
@@ -73,6 +74,9 @@ struct hgt_pop_params {
     double fitness_scale;
     double fitness_shape;
     double b_mu_rate;
+
+    // linkage tracking size.
+    int linkage_size;
 };
 
 struct hgt_pop_linkage {

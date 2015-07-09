@@ -28,7 +28,7 @@ unsigned long search_region(unsigned long pos, unsigned long** region, int num_r
 
 hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r) {
     char * ancestor;
-    int i;
+    int i, j;
     int random_seq(char * seq, unsigned long seq_len, const gsl_rng * r);
     
     hgt_pop * p = (hgt_pop *) malloc (sizeof(hgt_pop));
@@ -36,11 +36,18 @@ hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r) {
     p->size = params->size;
     p->seq_len = params->seq_len;
     p->generation = 0;
+    p->linkage_size = params->linkage_size;
     
     p->genomes = (char **) malloc(p->size * sizeof(char *));
     p->fitness = (double *) malloc(p->size * sizeof(double));
     p->linkages = (hgt_pop_linkage **) malloc(p->size * sizeof(hgt_pop_linkage*));
-    p->locus_linkages = (hgt_pop_linkage **) malloc(p->size * sizeof(hgt_pop_linkage*)); 
+    p->locus_linkages = (hgt_pop_linkage ***) malloc(p->linkage_size * sizeof(hgt_pop_linkage**));
+    for (i = 0; i < p->linkage_size; i++) {
+        p->locus_linkages[i] = (hgt_pop_linkage**) malloc(p->size * sizeof(hgt_pop_linkage*));
+        for (j = 0; j < p->size; j++) {
+            p->locus_linkages[i][j] = hgt_pop_linkage_new(NULL, p->generation);
+        }
+    }
     
     // random initilize genomes
     ancestor = malloc((p->seq_len+1) * sizeof(char));
@@ -50,7 +57,6 @@ hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r) {
         strcpy(p->genomes[i], ancestor);
         p->fitness[i] = 0;
         p->linkages[i] = hgt_pop_linkage_new(NULL, p->generation);
-        p->locus_linkages[i] = hgt_pop_linkage_new(NULL, p->generation);
     }
     
     // define transfer hotspots
@@ -114,11 +120,17 @@ hgt_pop * hgt_pop_copy(hgt_pop * p) {
 }
 
 int hgt_pop_free(hgt_pop * p) {
-    int i;
+    int i, j;
     for (i = 0; i < p->size; i ++) {
         free(p->genomes[i]);
         hgt_pop_linkage_free(p->linkages[i]);
-        hgt_pop_linkage_free(p->locus_linkages[i]);
+    }
+
+    for (i = 0; i < p->linkage_size; i++) {
+        for (j = 0; j < p->size; j++) {
+            hgt_pop_linkage_free(p->locus_linkages[i][j]);
+        }
+        free(p->locus_linkages[i]);
     }
 
     free(p->genomes);
@@ -524,33 +536,50 @@ int hgt_pop_transfer_at(hgt_pop *p,
                         unsigned long frag_len, 
                         unsigned long start)
 {
-    int exit_code, track_linkage;
+    int linkage_transfer(hgt_pop_linkage ** linkages, int donor, int receiver, unsigned long generation);
+    int exit_code;
     exit_code = EXIT_SUCCESS;
-    track_linkage = 0;
     if (start + frag_len < p->seq_len) {
         strncpy(p->genomes[receiver]+start, p->genomes[donor]+start, frag_len);
-        if (start == 0) {
-            track_linkage = 1;
-        }
     } else {
         strcpy(p->genomes[receiver]+start, p->genomes[donor]+start);
         strncpy(p->genomes[receiver], p->genomes[donor], start + frag_len - p->seq_len);
-        track_linkage = 1;
     }
 
-    if (track_linkage == 1 && donor != receiver) {
-        hgt_pop_linkage * locus_parent;
-        unsigned long generation;
-        locus_parent = p->locus_linkages[donor]->parent;
-        generation = p->locus_linkages[donor]->birthTime;
-        hgt_pop_linkage_free(p->locus_linkages[receiver]);
-        p->locus_linkages[receiver] = hgt_pop_linkage_new(locus_parent, generation);
+    int i, track_linkage;
+    for (i = 0; i < p->linkage_size; i++) {
+        track_linkage = 0;
+        if (start + frag_len < p->seq_len) {
+            if (start == 0 && i < frag_len) {
+                track_linkage = 1;
+            }
+        } else {
+            if (i < start + frag_len - p->seq_len) {
+                track_linkage = 1;
+            }
+        }
+
+        if (track_linkage == 1) {
+            linkage_transfer(p->locus_linkages[i], donor, receiver, p->generation);
+        }
     }
 
     return exit_code;
 }
 
+int linkage_transfer(hgt_pop_linkage ** linkages, int donor, int receiver, unsigned long generation) {
+    hgt_pop_linkage * parent;
+    if (donor != receiver) {
+        parent = linkages[donor]->parent;
+        generation = linkages[donor]->birthTime;
+        hgt_pop_linkage_free(linkages[receiver]);
+        linkages[receiver] = hgt_pop_linkage_new(parent, generation);
+    }
+    return EXIT_SUCCESS;
+}
+
 int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
+    int linkage_birth_dead(hgt_pop_linkage **linkages, int birth, int dead, unsigned long generation);
     unsigned long b, d;
     double * fitness;
     // increase population generation by 1.
@@ -568,26 +597,27 @@ int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
         strcpy(p->genomes[d], p->genomes[b]);
         p->fitness[d] = p->fitness[b];
     }
-    
-    hgt_pop_linkage * parent, * locus_parent;
-    parent = p->linkages[b];
-    locus_parent = p->locus_linkages[b];
-    if (b != d) {
-        // free the dead linkages.
-        hgt_pop_linkage_free(p->linkages[d]);
-        hgt_pop_linkage_free(p->locus_linkages[d]);
-        // locate the new linkages to the array.
-        p->linkages[b] = hgt_pop_linkage_new(parent, p->generation);
-        p->linkages[d] = hgt_pop_linkage_new(parent, p->generation);
-        p->locus_linkages[b] = hgt_pop_linkage_new(locus_parent, p->generation);
-        p->locus_linkages[d] = hgt_pop_linkage_new(locus_parent, p->generation);
-    } else {
-        // just create a new linkage.
-        p->linkages[b] = hgt_pop_linkage_new(parent, p->generation);
-        p->locus_linkages[b] = hgt_pop_linkage_new(locus_parent, p->generation);
+
+    linkage_birth_dead(p->linkages, b, d, p->generation);
+    int i;
+    for (i = 0; i < p->linkage_size; i++) {
+        hgt_pop_linkage ** linkages;
+        linkages = p->locus_linkages[i];
+        linkage_birth_dead(linkages, b, d, p->generation);
     }
 
     free(fitness);
+    return EXIT_SUCCESS;
+}
+
+int linkage_birth_dead(hgt_pop_linkage **linkages, int birth, int dead, unsigned long generation) {
+    hgt_pop_linkage * parent;
+    parent = linkages[birth];
+    linkages[birth] = hgt_pop_linkage_new(parent, generation);
+    if (birth != dead) {
+        hgt_pop_linkage_free(linkages[dead]);
+        linkages[dead] = hgt_pop_linkage_new(parent, generation);
+    }
     return EXIT_SUCCESS;
 }
 
@@ -970,7 +1000,7 @@ hgt_pop_linkage * hgt_pop_linkage_alloc() {
 unsigned long hgt_pop_linkage_find_most_rescent_ancestor(hgt_pop_linkage ** linkages, int size) {
     int i;
     int bad, found, maxIndex;
-    unsigned long maxBirthTime;
+    unsigned long maxBirthTime, birthTime;
     hgt_pop_linkage * parent;
     // init variables.
     bad = 0;
@@ -997,8 +1027,9 @@ unsigned long hgt_pop_linkage_find_most_rescent_ancestor(hgt_pop_linkage ** link
             maxBirthTime = linkages[0]->birthTime;
             maxIndex = 0;
             for (i = 0; i < size; i++) {
-                if (maxBirthTime < linkages[i]->birthTime) {
-                    maxBirthTime = linkages[i]->birthTime;
+                birthTime = linkages[i]->birthTime;
+                if (maxBirthTime < birthTime) {
+                    maxBirthTime = birthTime;
                     maxIndex = i;
                 }
             }
