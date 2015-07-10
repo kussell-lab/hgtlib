@@ -14,6 +14,12 @@
 #include "hgt_cov.h"
 #include <gsl/gsl_rng.h>
 
+#define MORAN 0;
+#define WRIGHT_FISHER 1;
+#define LINEAR_SELECTION 2;
+#define CONSTANT_FRAG 0;
+#define EXP_FRAG 1;
+
 typedef struct hgt_pop_linkage hgt_pop_linkage;
 typedef struct hgt_pop hgt_pop;
 typedef struct hgt_pop_params hgt_pop_params;
@@ -34,6 +40,7 @@ struct hgt_pop {
     unsigned long * new_born;
     int cache_allocated;
     int linkage_size;
+    int target_size; // target population size.
 };
 
 struct hgt_pop_params {
@@ -77,6 +84,11 @@ struct hgt_pop_params {
 
     // linkage tracking size.
     int linkage_size;
+    
+    // reproduction model
+    unsigned int reprodution;
+    // fragment type
+    unsigned int frag_type;
 };
 
 struct hgt_pop_linkage {
@@ -88,6 +100,7 @@ struct hgt_pop_linkage {
 int hgt_pop_calc_fitness(hgt_pop *p, double * fitness);
 
 int hgt_pop_linkage_free(hgt_pop_linkage *l);
+int hgt_pop_linkages_free(hgt_pop_linkage ** linkages, int size);
 hgt_pop_linkage * hgt_pop_linkage_alloc();
 hgt_pop_linkage * hgt_pop_linkage_new(hgt_pop_linkage * parent, unsigned long birthTime);
 typedef unsigned long hgt_pop_linkage_find_time_func(hgt_pop_linkage ** linkages, int size);
@@ -114,10 +127,12 @@ double hgt_pop_mean_fitness(hgt_pop *p);
 typedef int (*hgt_pop_sample_func)(hgt_pop *p, const gsl_rng *r);
 int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r);
 int hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r);
+int hgt_pop_sample_linear_selection(hgt_pop *p, const gsl_rng *r);
 
 typedef double (*hgt_pop_coal_time_func)(unsigned long p_size, const gsl_rng *r);
 double hgt_pop_coal_time_moran(unsigned long p_size, const gsl_rng *r);
 double hgt_pop_coal_time_wf(unsigned long p_size, const gsl_rng *r);
+double hgt_pop_coal_time_linear_selection(unsigned long p_size, const gsl_rng *r);
 
 typedef double (*hgt_pop_frag_func)(hgt_pop_params *params, const gsl_rng *r);
 double hgt_pop_frag_constant(hgt_pop_params *params, const gsl_rng *r);
@@ -146,4 +161,5 @@ int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample
 typedef int(*hgt_pop_calc_pxy_func)(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len);
 int hgt_pop_calc_pxy(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
 int hgt_pop_calc_pxy_fft(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
+int hgt_pop_linkage_prune_p(hgt_pop *p);
 #endif

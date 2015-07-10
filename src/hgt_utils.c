@@ -148,30 +148,18 @@ void hgt_utils_increment_stat_variances(hgt_stat_variance *** vars, double ** va
 
 // do batch evoluation
 int hgt_utils_batch_evolve_moran(hgt_pop ** pops, int num, hgt_pop_params * params, gsl_rng *rng) {
-    int i, j;
-    for (i = 0; i < num; i++) {
-        for (j = 0; j < params->generations; j++) {
-            hgt_pop_evolve(pops[i], params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, hgt_pop_frag_constant, rng);
-        }
-    }
-    return 0;
+    return hgt_utils_batch_evolve(pops, num, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, hgt_pop_frag_constant, rng);
 }
 
 int hgt_utils_batch_evolve_moran_expon_frag(hgt_pop ** pops, int num, hgt_pop_params * params, gsl_rng *rng) {
-    int i, j;
-    for (i = 0; i < num; i++) {
-        for (j = 0; j < params->generations; j++) {
-            hgt_pop_evolve(pops[i], params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, hgt_pop_frag_exp, rng);
-        }
-    }
-    return EXIT_SUCCESS;
+    return hgt_utils_batch_evolve(pops, num, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, hgt_pop_frag_exp, rng);
 }
 
-int hgt_utils_batch_evolve(hgt_pop **ps, int num, hgt_pop_params *params, hgt_pop_sample_func sample_func, hgt_pop_coal_time_func coal_time_func, gsl_rng *r) {
+int hgt_utils_batch_evolve(hgt_pop **ps, int num, hgt_pop_params *params, hgt_pop_sample_func sample_func, hgt_pop_coal_time_func coal_time_func, hgt_pop_frag_func frag_f, gsl_rng *r) {
     int i, j;
     for (i = 0; i < num; i++) {
         for (j = 0; j < params->generations; j++) {
-            hgt_pop_evolve(ps[i], params, sample_func, coal_time_func, hgt_pop_frag_constant, r);
+            hgt_pop_evolve(ps[i], params, sample_func, coal_time_func, frag_f, r);
         }
     }
     return EXIT_SUCCESS;

@@ -16,7 +16,6 @@
 #include "hgt_pop.h"
 #include "hgt_utils.h"
 #include "bstrlib.h"
-#include "hgt_predict.h"
 
 int main(int argc, char *argv[]) {
     int write_pops(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs);
@@ -111,7 +110,7 @@ int main(int argc, char *argv[]) {
 
         asprintf(&fn, "%s.t2.txt", params->prefix);
         ft2 = fopen(fn, "w");
-        fprintf(ft2, "#genome_t2\tgenome_t3\tgenome_t4\tlocus_t2\tlocus_t3\tlocus_t4\tgenome_t2_var\tgenome_t3_var\tgenome_t4_var\tlocus_t2_var\tlocus_t3_var\tlocus_t4_var\tgenerations\n");
+        fprintf(ft2, "#genome_t2\tgenome_t3\tgenome_t4\tlocus_t2\tlocus_t3\tlocus_t4\tgenome_t2_var\tgenome_t3_var\tgenome_t4_var\tlocus_t2_var\tlocus_t3_var\tlocus_t4_var\tn\tgenerations\n");
         free(fn);
     }
     
@@ -121,9 +120,36 @@ int main(int argc, char *argv[]) {
     
     int i;
     time_t start, end;
+    hgt_pop_sample_func sample_f;
+    hgt_pop_coal_time_func coal_time_f;
+    hgt_pop_frag_func frag_f;
+    switch (params->frag_type) {
+        case 1:
+            frag_f = hgt_pop_frag_exp;
+            break;
+        default:
+            frag_f = hgt_pop_frag_constant;
+            break;
+    }
+    switch (params->reprodution) {
+        case 1:
+            sample_f = hgt_pop_sample_wf;
+            coal_time_f = hgt_pop_coal_time_wf;
+            break;
+        case 2:
+            sample_f = hgt_pop_sample_linear_selection;
+            coal_time_f = hgt_pop_coal_time_linear_selection;
+            break;
+        default:
+            sample_f = hgt_pop_sample_moran;
+            coal_time_f = hgt_pop_coal_time_moran;
+            break;
+    }
+    
     for (i = 0; i < params->sample_time; i++) {
         start = clock();
-        hgt_utils_batch_evolve_moran(ps, params->replicates, params, rng);
+
+        hgt_utils_batch_evolve(ps, params->replicates, params, sample_f, coal_time_f, frag_f, rng);
         pxy_calc(p2means, p2vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p2, rng);
         pxy_calc(p3means, p3vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p3, rng);
         pxy_calc(p4means, p4vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p4, rng);
@@ -132,7 +158,6 @@ int main(int argc, char *argv[]) {
         t2_calc(t2means, t2vars, ps, params, rank, numprocs, ft2, (i+1)*params->generations, rng);
         
         if (rank == 0) {
-            printf("Ks = %g, Expected = %g, Std Err = %g\n", hgt_stat_mean_get(p2means[0][3]), hgt_predict_ks_moran(params->size, params->mu_rate, params->tr_rate, params->frag_len), sqrt(hgt_stat_variance_get(p2vars[0][3])/(double)hgt_stat_variance_get_n(p2vars[0][3])));
             write_pxy(fp2, params->maxl, p2means, p2vars, (i+1)*params->generations);
             write_pxy(fp3, params->maxl, p3means, p3vars, (i+1)*params->generations);
             write_pxy(fp4, params->maxl, p4means, p4vars, (i+1)*params->generations);
@@ -292,6 +317,7 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
 }
 
 int t2_calc(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE * fp, int generation, gsl_rng *rng) {
+    
     int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int dim, int max_linkage, int sample_size, unsigned long generation);
     int i, j, k, count, dim, dest, tag, linkage_sizes[3], max_linkage;
     max_linkage = 3;
