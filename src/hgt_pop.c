@@ -644,7 +644,7 @@ int hgt_pop_sample_linear_selection(hgt_pop *p, const gsl_rng *r) {
     
     new_genomes = (char **) malloc(new_size * sizeof(char*));
     new_fitness = (double *) malloc(new_size * sizeof(double));
-    int j, k;
+    int j, k, seq_len;
     char * g;
     k = 0;
     for (i = 0; i < current_size; i++) {
@@ -654,7 +654,8 @@ int hgt_pop_sample_linear_selection(hgt_pop *p, const gsl_rng *r) {
                 if (j == 0) {
                     g = current_genomes[i];
                 } else {
-                    g = (char *) malloc(p->seq_len * sizeof(char));
+                    seq_len = p->seq_len + 1;
+                    g = (char *) malloc(seq_len * sizeof(char));
                     strcpy(g, current_genomes[i]);
                 }
                 new_genomes[k] = g;
@@ -773,7 +774,7 @@ int hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r) {
     double *current_fitness = p->fitness;
     char *g;
     k = 0;
-    int num_offspring;
+    int num_offspring, seq_len;
     for (i = 0; i < p->size; i++) {
         num_offspring = offsprings[i];
         if (num_offspring > 0) {
@@ -781,7 +782,8 @@ int hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r) {
                 if (j == 0) {
                     g = current_genomes[i];
                 } else {
-                    g = (char *) malloc(p->seq_len * sizeof(char));
+                    seq_len = p->seq_len + 1;
+                    g = (char *) malloc(seq_len * sizeof(char));
                     strcpy(g, current_genomes[i]);
                 }
                 new_genomes[k] = g;
