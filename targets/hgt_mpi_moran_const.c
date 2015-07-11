@@ -462,7 +462,7 @@ int write_t2(FILE *fp, hgt_stat_mean ***means, hgt_stat_variance ***vars, int di
         }
         fprintf(fp, "%ld\t%lu\n", hgt_stat_mean_get_n(means[0][0]), gen);
     }
-    
+    fflush(fp);
     return EXIT_SUCCESS;
 }
 
@@ -501,5 +501,6 @@ int write_cov(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_va
 
 int write_ks(FILE *fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen) {
     fprintf(fp, "%g\t%g\t%g\t%g\t%lu\t%lu\n", hgt_stat_mean_get(means[maxl][0]), hgt_stat_mean_get(means[maxl][1]), hgt_stat_variance_get(vars[maxl][0]), hgt_stat_variance_get(vars[maxl][1]), hgt_stat_mean_get_n(means[maxl][0]), gen);
+    fflush(fp);
     return EXIT_SUCCESS;
 }
