@@ -15,7 +15,9 @@ hgt_linkage * hgt_linkage_new(hgt_linkage * parent, unsigned long birthTime) {
     hgt_linkage *l = hgt_linkage_alloc();
     l->birthTime = birthTime;
     l->parent = parent;
-
+    if (parent) {
+        parent->numChildren++;
+    }
     return l;
 }
 
@@ -131,7 +133,8 @@ unsigned long hgt_linkage_find_most_rescent_coalescence_time(hgt_linkage ** link
 int hgt_linkage_prune(hgt_linkage *l) {
     hgt_linkage *parent;
     parent = l->parent;
-    if (parent) {
+
+    if (l && parent) {
         if (parent->numChildren <= 1) {
             l->parent = parent->parent;
             free(parent);

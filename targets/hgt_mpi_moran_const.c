@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     const gsl_rng_type *T;
     gsl_rng_env_setup();
     T = gsl_rng_default;
-    int seed = rank;
+    int seed = time(NULL) + rank;
     gsl_rng *rng = gsl_rng_alloc(T);
     gsl_rng_set(rng, seed);
     hgt_pop **ps = hgt_utils_alloc_populations(params, rank, rng);

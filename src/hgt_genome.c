@@ -68,29 +68,22 @@ int hgt_genome_transfer(hgt_genome *receiver, hgt_genome *donor, unsigned int st
     int end;
     end = start + frag_len;
     if (end < receiver->seq_len) {
-        strncpy(receiver->seq, donor->seq, frag_len);
+        strncpy(receiver->seq+start, donor->seq+start, frag_len);
     } else {
         strcpy(receiver->seq+start, donor->seq+start);
         strncpy(receiver->seq, donor->seq, end - receiver->seq_len);
     }
-    
     return EXIT_SUCCESS;
 }
 
 int hgt_genome_fitness_transfer(hgt_genome *receiver, hgt_genome *donor, unsigned int start, unsigned int frag_len) {
     unsigned int end, i;
     end = start + frag_len;
-    if (end < receiver->seq_len) {
-        for (i = start; i < end; i++) {
-            receiver->fitness[i] = donor->fitness[i];
-        }
+    if (end < receiver->fitness_size) {
+        memcpy(receiver->fitness + start, donor->fitness + start, frag_len * sizeof(double));
     } else {
-        for (i = start; i < receiver->fitness_size; i++) {
-            receiver->fitness[i] = donor->fitness[i];
-        }
-        for (i = 0; i < end - receiver->seq_len; i++) {
-            receiver->fitness[i] = donor->fitness[i];
-        }
+        memcpy(receiver->fitness + start, donor->fitness + start, (receiver->fitness_size - start) * sizeof(double));
+        memcpy(receiver->fitness, donor->fitness, (end - receiver->fitness_size) * sizeof(double));
     }
     return EXIT_SUCCESS;
 }

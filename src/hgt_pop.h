@@ -26,9 +26,9 @@
 typedef struct _hgt_pop hgt_pop;
 
 struct _hgt_pop {
-    unsigned long size;     // population size
-    unsigned long seq_len;  // genome length
-    unsigned long generation;
+    unsigned int size;     // population size
+    unsigned int seq_len;  // genome length
+    unsigned int generation;
     hgt_genome ** genomes;        // genome sequences
     hgt_linkage ** linkages; // linkages.
     hgt_linkage *** locus_linkages; // locus linkages.
@@ -36,8 +36,8 @@ struct _hgt_pop {
     int ** transfer_hotspots; // transfer hotspots
     
     // cache
-    unsigned long * survived;
-    unsigned long * new_born;
+    unsigned int * survived;
+    unsigned int * new_born;
     int cache_allocated;
     int linkage_size;
     int target_size; // target population size.
@@ -49,8 +49,8 @@ int hgt_pop_calc_fitness(hgt_pop *p, double * fitness);
 int hgt_pop_calc_coal_time(
     hgt_linkage **pop_linkages,
     int size, 
-    unsigned long sample_size, 
-    unsigned long *res, 
+    unsigned int sample_size,
+    unsigned long *res,
     int linkage_size, 
     hgt_linkage_find_time_func find_func,
     const gsl_rng *r);
@@ -94,8 +94,8 @@ int hgt_pop_calc_t2(hgt_pop *p, unsigned long sample_size, unsigned long * res, 
 int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample_size, hgt_cov_sample_func sample_func, const gsl_rng *r);
 
 typedef int(*hgt_pop_calc_pxy_func)(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len);
-int hgt_pop_calc_pxy(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
-int hgt_pop_calc_pxy_fft(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
+int hgt_pop_calc_pxy(double *pxy, unsigned int maxl, double *d1, double *d2, unsigned int len, int circular);
+int hgt_pop_calc_pxy_fft(double *pxy, unsigned int maxl, double *d1, double *d2, unsigned int len, int circular);
 int hgt_pop_linkage_prune_p(hgt_pop *p);
 
 int hgt_pop_mutate(hgt_pop *p, hgt_params* params, const gsl_rng* r);
