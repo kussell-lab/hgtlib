@@ -6,7 +6,7 @@ file(GLOB hgt_SRC
     "*.h"
     "*.c"
 )
-add_library(hgt ${hgt_SRC})
+add_library(hgt ${hgt_SRC} hgt_linkage.h hgt_linkage.c)
 
 file(GLOB hgt_HEAD "*.h")
 install(TARGETS hgt DESTINATION lib)

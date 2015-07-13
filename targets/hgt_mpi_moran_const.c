@@ -16,15 +16,16 @@
 #include "hgt_pop.h"
 #include "hgt_utils.h"
 #include "bstrlib.h"
+#include "hgt_params.h"
 
 int main(int argc, char *argv[]) {
-    int write_pops(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs);
-    int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng *r);
-    int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, gsl_rng *rng);
+    int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs);
+    int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng *r);
+    int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hgt_params *params, int rank, int numprocs, gsl_rng *rng);
     int write_pxy(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     int write_cov(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
     int write_ks(FILE * fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen);
-    int t2_calc(hgt_stat_mean ***t2mean, hgt_stat_variance ***t2var, hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE * fp, int generations, gsl_rng *rng);
+    int t2_calc(hgt_stat_mean ***t2mean, hgt_stat_variance ***t2var, hgt_pop **ps, hgt_params *params, int rank, int numprocs, FILE * fp, int generations, gsl_rng *rng);
     int write_t2(FILE *fp, hgt_stat_mean ***means, hgt_stat_variance ***vars, int dim, int size, unsigned long gen);
     
     int numprocs, rank, exit_code;
@@ -32,14 +33,14 @@ int main(int argc, char *argv[]) {
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     
-    hgt_pop_params *params = hgt_pop_params_alloc();
-    exit_code = hgt_pop_params_parse(params, argc, argv, "hgt_mpi_moran_const");
+    hgt_params *params = hgt_params_alloc();
+    exit_code = hgt_params_parse(params, argc, argv, "hgt_mpi_moran_const");
     if (exit_code == EXIT_FAILURE) {
         goto exit;
     }
     params->linkage_size = params->frag_len;
     if (rank == 0) {
-        hgt_pop_params_printf(params, stdout);
+        hgt_params_printf(params, stdout);
     }
     
     const gsl_rng_type *T;
@@ -212,7 +213,7 @@ int main(int argc, char *argv[]) {
     
     hgt_utils_free_populations(ps, params->replicates);
     gsl_rng_free(rng);
-    hgt_pop_params_free(params);
+    hgt_params_free(params);
     
 exit:
     MPI_Finalize();
@@ -220,7 +221,7 @@ exit:
     return EXIT_SUCCESS;
 }
 
-int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng *r) {
+int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng *r) {
     int i, j, l, k, n, count, dest, tag;
     count = params->maxl * 4;
     dest = 0;
@@ -259,7 +260,7 @@ int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, dou
     return EXIT_SUCCESS;
 }
 
-int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, gsl_rng *rng) {
+int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hgt_params *params, int rank, int numprocs, gsl_rng *rng) {
     int count, dest, tag;
     count = params->maxl * 4 + 4; // scov + rcov + pxpy + ks + vd
     dest = 0;
@@ -316,7 +317,7 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
     return EXIT_SUCCESS;
 }
 
-int t2_calc(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs, FILE * fp, int generation, gsl_rng *rng) {
+int t2_calc(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, hgt_pop **ps, hgt_params *params, int rank, int numprocs, FILE * fp, int generation, gsl_rng *rng) {
     
     int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int dim, int max_linkage, int sample_size, unsigned long generation);
     int i, j, k, count, dim, dest, tag, linkage_sizes[3], max_linkage;
@@ -378,8 +379,8 @@ int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned lo
     return EXIT_SUCCESS;
 }
 
-int write_pops(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs) {
-    bstring to_json(hgt_pop **ps, hgt_pop_params *params);
+int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs) {
+    bstring to_json(hgt_pop **ps, hgt_params *params);
     
     int dest, tag;
     dest = 0;
@@ -426,7 +427,7 @@ int write_pops(hgt_pop **ps, hgt_pop_params *params, int rank, int numprocs) {
     return EXIT_SUCCESS;
 }
 
-bstring to_json(hgt_pop ** ps, hgt_pop_params * params) {
+bstring to_json(hgt_pop ** ps, hgt_params * params) {
     int i;
     char *c;
     bstring b;
