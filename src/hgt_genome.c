@@ -35,6 +35,7 @@ int hgt_genome_free(hgt_genome *g) {
 int hgt_genome_copy(hgt_genome *des, hgt_genome *src) {
     memcpy(des->fitness, src->fitness, sizeof(double) * src->fitness_size);
     strcpy(des->seq, src->seq);
+    des->fitness_score = src->fitness_score;
     return EXIT_SUCCESS;
 }
 
@@ -81,7 +82,7 @@ int hgt_genome_transfer(hgt_genome *receiver, hgt_genome *donor, unsigned int st
 }
 
 int hgt_genome_fitness_transfer(hgt_genome *receiver, hgt_genome *donor, unsigned int start, unsigned int frag_len) {
-    unsigned int end, i;
+    unsigned int end;
 
     end = start + frag_len;
     if (end < receiver->fitness_size) {
