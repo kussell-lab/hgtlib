@@ -3,54 +3,60 @@
 #include "argtable2.h"
 #include <string.h>
 #include <stdlib.h>
+#include <argtable2.h>
 
+int hgt_params_check_default(hgt_params *params);
 
 // define handler for parsing configure file
 static int hgt_params_handler(void *params, const char* section, const char* name, const char* value) {
-    hgt_params* pconfig = (hgt_params*) params;
+    hgt_params *params1 = (hgt_params*) params;
     #define MATCH(s, n) strcmp(section, s) == 0 && strcmp(name, n) == 0
     if (MATCH("population", "size")) {
-        pconfig->size = atoi(value);
+        params1->size = (unsigned int) atoi(value);
     } else if (MATCH("population", "length")) {
-        pconfig->seq_len = atoi(value);
+        params1->seq_len = (unsigned int) atoi(value);
     } else if (MATCH("population", "generations")) {
-        pconfig->generations = atoi(value);
+        params1->generations = (unsigned int) atoi(value);
+    } else if (MATCH("population", "model")){
+        params1->reprodution = (unsigned int ) atoi(value);
     } else if (MATCH("mutation", "rate")) {
-        pconfig->mu_rate = atof(value);
+        params1->mu_rate = atof(value);
     } else if (MATCH("mutation", "hotspot_number")){
-        pconfig->mu_hotspot_num = atoi(value);
+        params1->mu_hotspot_num = (unsigned int) atoi(value);
     } else if (MATCH("mutation", "hotspot_length")) {
-        pconfig->mu_hotspot_length = atoi(value);
+        params1->mu_hotspot_length = (unsigned int) atoi(value);
     } else if (MATCH("mutation", "hotspot_ratio")) {
-        pconfig->mu_hotspot_ratio = atof(value);
+        params1->mu_hotspot_ratio = atof(value);
     } else if (MATCH("transfer", "rate")) {
-        pconfig->tr_rate = atof(value);
+        params1->tr_rate = atof(value);
     } else if (MATCH("transfer", "fragment")) {
-        pconfig->frag_len = atoi(value);
+        params1->frag_len = (unsigned int) atoi(value);
+    } else if (MATCH("transfer", "distribution")) {
+        params1->frag_type = (unsigned int) atoi(value);
     } else if (MATCH("sample", "size")) {
-        pconfig->sample_size = atoi(value);
+        params1->sample_size = (unsigned int) atoi(value);
     } else if (MATCH("sample", "time")) {
-        pconfig->sample_time = atoi(value);
+        params1->sample_time = (unsigned int) atoi(value);
     } else if (MATCH("sample", "replicates")) {
-        pconfig->replicates = atoi(value);
+        params1->replicates = (unsigned int) atoi(value);
     } else if (MATCH("cov", "maxl")) {
-        pconfig->maxl = atoi(value);
+        params1->maxl = (unsigned int) atoi(value);
     } else if (MATCH("output", "prefix")) {
-        pconfig->prefix = strdup(value);
+        params1->prefix = strdup(value);
     } else if (MATCH("transfer", "hotspot_number")) {
-        pconfig->tr_hotspot_num = atoi(value);
+        params1->tr_hotspot_num = (unsigned int) atoi(value);
     } else if (MATCH("transfer", "hotspot_length")) {
-        pconfig->tr_hotspot_length = atoi(value);
+        params1->tr_hotspot_length = (unsigned int) atoi(value);
     } else if (MATCH("transfer", "hotspot_ratio")) {
-        pconfig->tr_hotspot_ratio = atoi(value);
+        params1->tr_hotspot_ratio = atoi(value);
     } else if (MATCH("fitness", "rate")) {
-        pconfig->fitness_mutation_rate = atof(value);
+        params1->fitness_mutation_rate = atof(value);
     } else if (MATCH("fitness", "scale")) {
-        pconfig->fitness_scale = atof(value);
+        params1->fitness_scale = atof(value);
     } else if (MATCH("fitness", "shape")) {
-        pconfig->fitness_shape = atof(value);
-    } else if (MATCH("fitness", "size")) {
-        pconfig->fitness_size = (unsigned int) atoi(value);
+        params1->fitness_shape = atof(value);
+    } else if (MATCH("fitness", "coupled")) {
+        params1->fitness_coupled = (unsigned int) atoi(value);
     } else {
         return 0;
     }
@@ -58,21 +64,22 @@ static int hgt_params_handler(void *params, const char* section, const char* nam
 }
 
 // use inih library to parse configure file, returning hgt_params
-int hgt_params_parse_from_ini(hgt_params *params, char *filename) {
+int hgt_params_parse_from_ini(hgt_params *params, const char *filename) {
     if (ini_parse(filename, hgt_params_handler, params) < 0) {
         printf("Can't load %s\n", filename);
         return EXIT_FAILURE;
     }
+    hgt_params_check_default(params);
     return EXIT_SUCCESS;
 }
 
 int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname){
-    struct arg_int *size = arg_int1("n", "size", "<unsigned long>", "population size");
-    struct arg_int *seq_len = arg_int1("l", "len", "<unsigned long>", "genome length");
+    struct arg_int *size = arg_int0("n", "size", "<unsigned long>", "population size");
+    struct arg_int *seq_len = arg_int0("l", "len", "<unsigned long>", "genome length");
     struct arg_int *frag_len = arg_int0("f", "frag", "<unsigned long>", "fragment length");
-    struct arg_dbl *mu_rate = arg_dbl1("u", "mu_rate", "<double>", "mutation rate");
+    struct arg_dbl *mu_rate = arg_dbl0("u", "mu_rate", "<double>", "mutation rate");
     struct arg_dbl *tr_rate = arg_dbl0("t", "tr_rate", "<double>", "transfer rate");
-    struct arg_int *gen = arg_int1("g", "gen", "<unsigned long>", "generations");
+    struct arg_int *gen = arg_int0("g", "gen", "<unsigned long>", "generations");
     struct arg_dbl *fitness_mutation_rate = arg_dbl0("z", "b_mu_rate", "<double>", "beneficial mutation rate");
     struct arg_dbl *fitness_scale = arg_dbl0("x", "fitness_scale", "<double>", "selection efficient scale");
     struct arg_dbl *fitness_shape = arg_dbl0("y", "fitness_shape", "<double>", "selection efficient shape");
@@ -83,7 +90,7 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     struct arg_int *repl = arg_int0("r", "replication", "<unsigned long>", "replication");
     struct arg_int *maxl = arg_int0("m", "maxl", "<unsigned long>", "maxl");
     
-    struct arg_file *prefix = arg_file1("o", "output", "<output>", "prefix");
+    struct arg_file *prefix = arg_file0("o", "output", "<output>", "prefix");
     
     struct arg_file *config = arg_file0("C", "config", "<output>", "configure file");
     struct arg_int *reproduction = arg_int0("a", "reproduction_model", "<unsigned int>", "reproduction model");
@@ -129,7 +136,9 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     
     /* check if a configure file is supplied, use config ini parser */
     if (config->count > 0) {
-        exit_code = hgt_params_parse_from_ini(params, (char *) config->filename[0]);
+        const char * filename = config->filename[0];
+        printf("Using config file: %s\n", filename);
+        exit_code = hgt_params_parse_from_ini(params, filename);
         goto exit;
     }
     
@@ -148,11 +157,7 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     params->reprodution = reproduction->ival[0];
     params->frag_type = frag_type->ival[0];
 
-    if (params->fitness_coupled == 1) {
-        params->fitness_size = params->seq_len;
-    } else {
-        params->fitness_size = 1;
-    }
+
 
     
     if (maxl->count > 0) {
@@ -178,6 +183,8 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     } else {
         params->replicates = 1;
     }
+
+    hgt_params_check_default(params);
     
 exit:
     arg_freetable(argtable,sizeof(argtable)/sizeof(argtable[0]));
@@ -187,6 +194,17 @@ exit:
 int hgt_params_free(hgt_params *params){
     free(params);
     
+    return EXIT_SUCCESS;
+}
+
+int hgt_params_check_default(hgt_params *params) {
+    // check fitness size.
+    if (params->fitness_coupled == 1) {
+        params->fitness_size = params->seq_len;
+    } else {
+        params->fitness_size = 1;
+    }
+
     return EXIT_SUCCESS;
 }
 

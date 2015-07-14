@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hgt_genome.h"
-#include <gsl/gsl_rng.h>
 
 const char DNA[5] = "ATGC\0";
 const int NUM_DNA_CHAR = 4;

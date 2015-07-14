@@ -3,7 +3,6 @@
 //
 #include "hgt_linkage.h"
 #include <stdlib.h>
-
 hgt_linkage * hgt_linkage_alloc() {
     hgt_linkage *l = (hgt_linkage *) malloc(sizeof(hgt_linkage));
     l->birthTime = 0;
