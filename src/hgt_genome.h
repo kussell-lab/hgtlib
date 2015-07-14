@@ -18,6 +18,8 @@ struct hgt_genome {
     double * fitness;
     unsigned int seq_len;
     unsigned int fitness_size;
+
+    double fitness_score;
 };
 
 hgt_genome * hgt_genome_alloc(unsigned int seq_len, unsigned int fitness_size);

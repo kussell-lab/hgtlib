@@ -13,12 +13,15 @@
 const char DNA[5] = "ATGC\0";
 const int NUM_DNA_CHAR = 4;
 
+int transfer_mutate(hgt_genome *receiver, hgt_genome *donor, int start, int end);
+
 hgt_genome * hgt_genome_alloc(unsigned int seq_len, unsigned int fitness_size) {
     hgt_genome *g = (hgt_genome *) malloc(sizeof(hgt_genome)) ;
     g->seq_len = seq_len;
     g->fitness_size = fitness_size;
     g->seq = (char *) malloc((seq_len+1) * sizeof(char));
     g->fitness = (double *) malloc(fitness_size * sizeof(double));
+    g->fitness_score = 0;
     return g;
 }
 
@@ -60,6 +63,7 @@ int hgt_genome_mutate(hgt_genome *g, unsigned int pos, const gsl_rng *r) {
 int hgt_genome_fitness_mutate(hgt_genome *g, unsigned int pos, double delta) {
     if (pos < g->fitness_size) {
         g->fitness[pos] += delta;
+        g->fitness_score += delta;
     }
     return EXIT_SUCCESS;
 }
@@ -78,23 +82,30 @@ int hgt_genome_transfer(hgt_genome *receiver, hgt_genome *donor, unsigned int st
 
 int hgt_genome_fitness_transfer(hgt_genome *receiver, hgt_genome *donor, unsigned int start, unsigned int frag_len) {
     unsigned int end, i;
+
     end = start + frag_len;
     if (end < receiver->fitness_size) {
-        memcpy(receiver->fitness + start, donor->fitness + start, frag_len * sizeof(double));
+        transfer_mutate(receiver, donor, start, end);
     } else {
-        memcpy(receiver->fitness + start, donor->fitness + start, (receiver->fitness_size - start) * sizeof(double));
-        memcpy(receiver->fitness, donor->fitness, (end - receiver->fitness_size) * sizeof(double));
+        transfer_mutate(receiver, donor, start, receiver->fitness_size);
+        transfer_mutate(receiver, donor, 0, end - receiver->fitness_size);
     }
     return EXIT_SUCCESS;
 }
 
-double hgt_genome_get_fitness(hgt_genome *g) {
-    double fitness = 0;
+int transfer_mutate(hgt_genome *receiver, hgt_genome *donor, int start, int end) {
     int i;
-    for (i = 0; i < g->fitness_size; ++i) {
-        fitness += g->fitness[i];
+    double delta;
+    for (i = start;i < end; i++) {
+        delta = donor->fitness[i] - receiver->fitness[i];
+        hgt_genome_fitness_mutate(receiver, i, delta);
     }
-    return fitness;
+
+    return EXIT_SUCCESS;
+}
+
+double hgt_genome_get_fitness(hgt_genome *g) {
+    return g->fitness_score;
 }
 
 char * hgt_genome_get_seq(hgt_genome *g) {
