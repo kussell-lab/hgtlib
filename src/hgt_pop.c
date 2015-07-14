@@ -500,7 +500,7 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
 
     weights[0] = params->mu_rate * (double) (p->seq_len * p->size);
     weights[1] = params->tr_rate * (double) (p->seq_len * p->size);
-    weights[2] = params->fitness_mutation_rate * (double) (params->fitness_size * p->size);
+    weights[2] = params->fitness_mutation_rate;
     total = 0;
     for (i = 0; i < 3; i ++) {
         total += weights[i];
