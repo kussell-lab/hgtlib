@@ -3,6 +3,9 @@
 //
 #include "hgt_linkage.h"
 #include <stdlib.h>
+
+hgt_linkage * free_linkage_and_return_parent(hgt_linkage *l);
+
 hgt_linkage * hgt_linkage_alloc() {
     hgt_linkage *l = (hgt_linkage *) malloc(sizeof(hgt_linkage));
     l->birthTime = 0;
@@ -21,18 +24,9 @@ hgt_linkage * hgt_linkage_new(hgt_linkage * parent, unsigned long birthTime) {
 }
 
 int hgt_linkage_free(hgt_linkage *l) {
-    hgt_linkage * parent;
-    parent = l->parent;
-    if (l->numChildren < 1) {
-        if (parent) {
-            // reduce the number of children of the parent by 1,
-            // and try to free the parent.
-            parent->numChildren--;
-            hgt_linkage_free(parent);
-        }
-        free(l);
+    while (l && l->numChildren < 1) {
+        l = free_linkage_and_return_parent(l);
     }
-
     return EXIT_SUCCESS;
 }
 
@@ -43,6 +37,7 @@ int hgt_linkage_free_more(hgt_linkage **l, unsigned int size) {
     }
     return  EXIT_SUCCESS;
 }
+
 unsigned long hgt_linkage_find_most_rescent_ancestor_time(hgt_linkage ** linkages, int size) {
     int bad = 0, found = 1;
     hgt_linkage * parent = linkages[0]->parent;
@@ -132,13 +127,10 @@ unsigned long hgt_linkage_find_most_rescent_coalescence_time(hgt_linkage ** link
 int hgt_linkage_prune(hgt_linkage *l) {
     hgt_linkage *parent;
     parent = l->parent;
-
-    if (l && parent) {
-        if (parent->numChildren <= 1) {
-            l->parent = parent->parent;
-            free(parent);
-            hgt_linkage_prune(l);
-        }
+    while (parent && parent->numChildren <= 1) {
+        l->parent = parent->parent;
+        free(parent);
+        parent = l->parent;
     }
     return EXIT_SUCCESS;
 }
@@ -149,4 +141,15 @@ int hgt_linkage_prune_more(hgt_linkage **l, unsigned int size) {
         hgt_linkage_prune(l[i]);
     }
     return EXIT_SUCCESS;
+}
+
+/* internal methods */
+
+hgt_linkage * free_linkage_and_return_parent(hgt_linkage *l) {
+    hgt_linkage * parent = l->parent;
+    if (parent) {
+        parent->numChildren--;
+    }
+    free(l);
+    return parent;
 }
