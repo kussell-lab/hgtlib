@@ -54,6 +54,7 @@ int hgt_pop_calc_coal_time(
     int linkage_size, 
     hgt_linkage_find_time_func find_func,
     const gsl_rng *r);
+typedef int (*hgt_pop_calc_most_recent_coal_func) (hgt_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
 int hgt_pop_calc_most_recent_coal_time(hgt_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
 int hgt_pop_calc_most_recent_ancestor_time(hgt_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
 
