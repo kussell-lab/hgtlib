@@ -497,26 +497,36 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
     double weights[3];
     
     sample_f(p, r);
+    
+    // mutate fitness.
+    double fitness_mutation_rate = params->fitness_mutation_rate * (double) p->size;
+    if (fitness_mutation_rate > 0) {
+        mu = c_time_f(p->size, r) * fitness_mutation_rate;
+        count = gsl_ran_poisson(r, mu);
+        for (k = 0; k < count; k++) {
+            hgt_pop_fitness_mutate_step(p, params, r);
+        }
+    }
 
+    // neutral sites mutation and transfer.
+    int weight_size;
+    weight_size = 2;
     weights[0] = params->mu_rate * (double) (p->seq_len * p->size);
     weights[1] = params->tr_rate * (double) (p->seq_len * p->size);
-    weights[2] = params->fitness_mutation_rate * (double) p->size;
     total = 0;
-    for (i = 0; i < 3; i ++) {
+    for (i = 0; i < weight_size; i ++) {
         total += weights[i];
     }
 
     mu = c_time_f(p->size, r) * total;
     count = gsl_ran_poisson(r, mu);
     for (k = 0; k < count; k ++) {
-        i = hgt_utils_Roulette_Wheel_select(weights, 3, r);
+        i = hgt_utils_Roulette_Wheel_select(weights, weight_size, r);
         if (i == 0) {
             hgt_pop_mutate(p, params, r);
-        } else if (i == 1) {
+        } else {
             frag_len = (unsigned int) frag_f(params, r);
             hgt_pop_transfer(p, params, frag_len, r);
-        } else {
-            hgt_pop_fitness_mutate_step(p, params, r);
         }
     }
     
@@ -533,7 +543,7 @@ double hgt_pop_coal_time_moran(unsigned long p_size, const gsl_rng *r) {
 }
 
 double hgt_pop_coal_time_wf(unsigned long p_size, const gsl_rng *r) {
-    return gsl_ran_exponential(r, 1.0);
+    return 1.0;
 }
 
 double hgt_pop_coal_time_linear_selection(unsigned long p_size, const gsl_rng *r) {
