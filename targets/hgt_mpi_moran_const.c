@@ -227,26 +227,27 @@ int main(int argc, char *argv[]) {
         hgt_utils_free_stat_variances(t2vars, linkage_dim, 3);
         hgt_utils_free_stat_means(q2means, linkage_dim, 3);
         hgt_utils_free_stat_variances(q2vars, linkage_dim, 3);
+	printf("rank %d: Free mean and variances!\n", rank);
         fclose(fp2);
         fclose(fp3);
         fclose(fp4);
         fclose(fpcov);
         fclose(fpks);
         fclose(ft2);
-        fclose(fp2);
+        fclose(fq2);
         printf("Succesffully close all files!\n");
     }
     
     free(pxy);
     free(d1);
     free(d2);
-    printf("Free caches!\n");
+    printf("rank %d: Free caches!\n", rank);
     
     hgt_utils_free_populations(ps, params->replicates);
-    printf("Free populations!\n");
+    printf("rank %d: Free populations!\n", rank);
     gsl_rng_free(rng);
     hgt_params_free(params);
-    printf("Free rng and params!\n");
+    printf("rank %d: Free rng and params!\n", rank);
     
 exit:
     MPI_Finalize();
