@@ -28,7 +28,7 @@ hgt_pop * hgt_pop_alloc(hgt_params *params, const gsl_rng * r) {
     p->seq_len = params->seq_len;
     p->generation = 0;
     p->linkage_size = params->linkage_size;
-    
+     
     p->linkages = (hgt_linkage **) malloc(p->size * sizeof(hgt_linkage*));
     for (j = 0; j < p->size; ++j) {
         p->linkages[j] = hgt_linkage_new(NULL, p->generation);

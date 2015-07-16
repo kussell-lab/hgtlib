@@ -7,17 +7,10 @@ set(LIBS ${LIBS} ${MPI_LIBRARIES} ${GSL_LIBRARIES} ${ARGTABLE_LIBRARIES} hgt bst
 MESSAGE(STATUS ${MPI_INCLUDE_PATH})
 
 set(CMAKE_C_COMPILER cc)
-add_executable(hgt_mpi_moran_step hgt_mpi_moran_step.c)
-target_link_libraries(hgt_mpi_moran_step ${LIBS})
-install(TARGETS hgt_mpi_moran_step DESTINATION bin)
-
-set(CMAKE_C_COMPILER cc)
 add_executable(hgt_mpi_moran_const hgt_mpi_moran_const.c)
 target_link_libraries(hgt_mpi_moran_const ${LIBS})
 install(TARGETS hgt_mpi_moran_const DESTINATION bin)
 
-set(CMAKE_C_COMPILER cc)
-add_executable(hgt_mpi_moran_expon hgt_mpi_moran_expon.c)
-target_link_libraries(hgt_mpi_moran_expon ${LIBS})
-install(TARGETS hgt_mpi_moran_expon DESTINATION bin)
-
+add_test("run_mpi_example1" "mpirun" "-n" "2" "${CMAKE_CURRENT_BINARY_DIR}/hgt_mpi_moran_const" "-C" "${CMAKE_CURRENT_LIST_DIR}/examples/run_mpi_example1.cfg")
+add_test("run_mpi_example2" "mpirun" "-n" "2" "${CMAKE_CURRENT_BINARY_DIR}/hgt_mpi_moran_const" "-C" "${CMAKE_CURRENT_LIST_DIR}/examples/run_mpi_example2.cfg")
+add_test("run_mpi_example3" "mpirun" "-n" "2" "${CMAKE_CURRENT_BINARY_DIR}/hgt_mpi_moran_const" "-C" "${CMAKE_CURRENT_LIST_DIR}/examples/run_mpi_example3.cfg")

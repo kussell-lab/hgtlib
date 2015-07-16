@@ -39,6 +39,8 @@ static int hgt_params_handler(void *params, const char* section, const char* nam
         params1->sample_time = (unsigned int) atoi(value);
     } else if (MATCH("sample", "replicates")) {
         params1->replicates = (unsigned int) atoi(value);
+    } else if (MATCH("linkage", "size")) {
+        params1->linkage_size = (unsigned int) atoi(value);
     } else if (MATCH("cov", "maxl")) {
         params1->maxl = (unsigned int) atoi(value);
     } else if (MATCH("output", "prefix")) {
@@ -85,10 +87,11 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     struct arg_dbl *fitness_shape = arg_dbl0("y", "fitness_shape", "<double>", "selection efficient shape");
     struct arg_int *fitness_coupled = arg_int0("c", "fitness_coupled", "<int>", "fitness coupled");
     
-    struct arg_int *spl_size = arg_int0("s", "sample_size", "<unsigned long>", "sample size");
-    struct arg_int *spl_time = arg_int0("i", "sample_time", "<unsigned long>", "sample time");
-    struct arg_int *repl = arg_int0("r", "replication", "<unsigned long>", "replication");
+    struct arg_int *spl_size = arg_int0("s", "sample_size", "<unsigned int>", "sample size");
+    struct arg_int *spl_time = arg_int0("i", "sample_time", "<unsigned int>", "sample time");
+    struct arg_int *repl = arg_int0("r", "replication", "<unsigned int>", "replication");
     struct arg_int *maxl = arg_int0("m", "maxl", "<unsigned long>", "maxl");
+    struct arg_int *linkage_size = arg_int0("k", "linkage_size", "<unsigned int>", "locus linkage size for tracking");
     
     struct arg_file *prefix = arg_file0("o", "output", "<output>", "prefix");
     
@@ -97,10 +100,10 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     struct arg_int *frag_type = arg_int0("b", "frag_type", "<unsigned int>", "fragment type");
     
     struct arg_lit  *help    = arg_lit0(NULL,"help", "print this help and exit");
-    struct arg_end  *end     = arg_end(23);
+    struct arg_end  *end     = arg_end(24);
     
     void* argtable[] = {size, seq_len, frag_len, mu_rate, tr_rate, gen, fitness_mutation_rate, fitness_scale, fitness_shape, fitness_coupled, spl_time,
-        spl_size, repl, maxl, prefix, config, reproduction, frag_type, help, end};
+        spl_size, repl, maxl, linkage_size, prefix, config, reproduction, frag_type, help, end};
     int nerrors;
     int exit_code = EXIT_SUCCESS;
     /* verify the argtable[] entries were allocated sucessfully */

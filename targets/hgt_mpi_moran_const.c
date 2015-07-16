@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     if (exit_code == EXIT_FAILURE) {
         goto exit;
     }
-    params->linkage_size = params->frag_len;
+    
     if (rank == 0) {
         hgt_params_printf(params, stdout);
     }
@@ -378,50 +378,6 @@ int t2_calc(hgt_stat_mean *** t2means,
         }
         for (j = 0; j < max_linkage; j++) {
             coal_time_func(ps[i]->linkages, ps[i]->size, params->sample_size, buf+(max_linkage * params->linkage_size + j) * params->sample_size, linkage_sizes[j], rng);
-        }
-        
-        if (rank != 0) {
-            MPI_Send(buf, count, MPI_UNSIGNED_LONG, dest, tag, MPI_COMM_WORLD);
-        } else {
-            for (j = 0; j < numprocs; j++) {
-                if (j != 0) {
-                    // recieve data from worker nodes.
-                    MPI_Recv(buf, count, MPI_UNSIGNED_LONG, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                }
-                update_t2(t2means, t2vars, buf, max_linkage, dim, params->sample_size, generation);
-            }
-        }
-    }
-    free(buf);
-    return EXIT_SUCCESS;
-}
-
-
-int t2_calc2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, hgt_pop **ps, hgt_params *params, int rank, int numprocs, FILE * fp, int generation, gsl_rng *rng) {
-    
-    int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int dim, int max_linkage, int sample_size, unsigned long generation);
-    int i, j, k, count, dim, dest, tag, linkage_sizes[3], max_linkage;
-    max_linkage = 3;
-    dim = 1 + params->linkage_size;
-    count = params->sample_size * dim * max_linkage;
-    for (i = 0; i < max_linkage; i++) {
-        linkage_sizes[i] = i + 2;
-    }
-
-    unsigned long * buf;
-    buf = (unsigned long *) malloc((count + 1) * sizeof(unsigned long));
-
-    dest = 0;
-    tag = 0;
-    
-    for (i = 0; i < params->replicates; i++) {
-        for (k = 0; k < params->linkage_size; k++) {
-            for (j = 0; j < max_linkage; j++) {
-                hgt_pop_calc_most_recent_ancestor_time(ps[i]->locus_linkages[k], ps[i]->size, params->sample_size, buf+(max_linkage * k + j) * params->sample_size, linkage_sizes[j], rng);
-            }
-        }
-        for (j = 0; j < max_linkage; j++) {
-            hgt_pop_calc_most_recent_ancestor_time(ps[i]->linkages, ps[i]->size, params->sample_size, buf+(max_linkage * params->linkage_size + j) * params->sample_size, linkage_sizes[j], rng);
         }
         
         if (rank != 0) {
