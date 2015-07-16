@@ -234,15 +234,19 @@ int main(int argc, char *argv[]) {
         fclose(fpks);
         fclose(ft2);
         fclose(fp2);
+        printf("Succesffully close all files!\n");
     }
     
     free(pxy);
     free(d1);
     free(d2);
+    printf("Free caches!\n");
     
     hgt_utils_free_populations(ps, params->replicates);
+    printf("Free populations!\n");
     gsl_rng_free(rng);
     hgt_params_free(params);
+    printf("Free rng and params!\n");
     
 exit:
     MPI_Finalize();
