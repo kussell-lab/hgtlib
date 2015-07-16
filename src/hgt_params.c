@@ -1,9 +1,8 @@
 #include "hgt_params.h"
 #include "ini.h"
-#include "argtable2.h"
+#include "argtable3.h"
 #include <string.h>
 #include <stdlib.h>
-#include <argtable2.h>
 
 int hgt_params_check_default(hgt_params *params);
 
