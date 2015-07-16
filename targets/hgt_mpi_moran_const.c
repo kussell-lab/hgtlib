@@ -17,6 +17,7 @@
 #include "hgt_utils.h"
 #include "bstrlib.h"
 #include "hgt_params.h"
+#include "asprintf.h"
 
 int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int dim, int max_linkage, int sample_size, unsigned long generation);
 

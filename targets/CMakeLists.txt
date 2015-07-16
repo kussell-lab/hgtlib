@@ -1,8 +1,8 @@
 find_package(MPI REQUIRED)
 find_package(GSL REQUIRED)
 
-include_directories(${GSL_INCLUDE_DIR} ${MPI_INCLUDE_PATH} . ../src ../bstrlib)
-set(LIBS ${LIBS} ${MPI_LIBRARIES} ${GSL_LIBRARIES} hgt bstrlib argtable3)
+include_directories(${GSL_INCLUDE_DIR} ${MPI_INCLUDE_PATH} . ../src ../bstrlib ../asprintf)
+set(LIBS ${LIBS} ${MPI_LIBRARIES} ${GSL_LIBRARIES} hgt bstrlib argtable3 asprintf)
 MESSAGE(STATUS ${MPI_INCLUDE_PATH})
 
 set(CMAKE_C_COMPILER cc)
