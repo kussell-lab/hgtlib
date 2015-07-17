@@ -559,7 +559,7 @@ int write_ks(FILE *fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_vari
 }
 
 int check_mpi_error_code(int error_code, char *ops_type, char *parent_func) {
-	if (error_code != MPI_SUBVERSION) {
+	if (error_code != MPI_SUCCESS) {
 		printf("error when %s with error code %d in func %s\n", ops_type, error_code, parent_func);
 	}
     return EXIT_SUCCESS;
