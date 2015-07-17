@@ -20,7 +20,7 @@
 #include "asprintf.h"
 
 int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int dim, int max_linkage, int sample_size, unsigned long generation);
-
+int check_mpi_error_code(int error_code, char * ops_type, char * parent_func);
 int main(int argc, char *argv[]) {
     int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs);
     int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng *r);
@@ -44,7 +44,6 @@ int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    
     hgt_params *params = hgt_params_alloc();
     exit_code = hgt_params_parse(params, argc, argv, "hgt_mpi_moran_const");
     if (exit_code == EXIT_FAILURE) {
@@ -58,7 +57,7 @@ int main(int argc, char *argv[]) {
     const gsl_rng_type *T;
     gsl_rng_env_setup();
     T = gsl_rng_default;
-    int seed = time(NULL) + rank;
+    long int seed = (long int) time(NULL) + rank;
     gsl_rng *rng = gsl_rng_alloc(T);
     gsl_rng_set(rng, seed);
     hgt_pop **ps = hgt_utils_alloc_populations(params, rank, rng);
@@ -257,7 +256,8 @@ exit:
 }
 
 int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng *r) {
-    int i, j, l, k, n, count, dest, tag;
+	char * func_name = "pxy_calc";
+	int i, j, l, k, n, count, dest, tag, error_code;
     count = params->maxl * 4;
     dest = 0;
     tag = 0;
@@ -271,15 +271,16 @@ int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, dou
             for (k = 0; k < 4; k++) {
                 pxy[l*4+k] = gsl_stats_mean(pxy+l*4+k, params->maxl*4, params->sample_size);
             }
-            
         }
         
         if (rank != 0) {
-            MPI_Send(pxy, count, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
+            error_code = MPI_Send(pxy, count, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
+			check_mpi_error_code(error_code, "MPI_Send", func_name);
         } else {
             for (j = 0; j < numprocs; j++) {
                 if (j != 0) {
-                    MPI_Recv(pxy, count, MPI_DOUBLE, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    error_code = MPI_Recv(pxy, count, MPI_DOUBLE, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+					check_mpi_error_code(error_code, "MPI_Recv", func_name);
                 }
                 
                 for (l = 0; l < params->maxl; l++) {
@@ -291,12 +292,13 @@ int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, dou
             }
         }
     }
-    
-    return EXIT_SUCCESS;
+
+	return EXIT_SUCCESS;
 }
 
 int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hgt_params *params, int rank, int numprocs, gsl_rng *rng) {
-    int count, dest, tag;
+	char *func_name = "cov_calc";
+	int count, dest, tag, error_code;
     count = params->maxl * 4 + 4; // scov + rcov + pxpy + ks + vd
     dest = 0;
     tag = 0;
@@ -307,8 +309,8 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
     int i, j, k;
     for (i = 0; i < params->replicates; i++) {
         // calculate covariance result
-//        hgt_pop_calc_cov(result, ps[i], params->sample_size, rng);
-        hgt_pop_calc_cov_all(result, ps[i]);
+        hgt_pop_calc_cov(result, ps[i], params->sample_size, rng);
+        // hgt_pop_calc_cov_all(result, ps[i]);
         // load buf the result
         for (j = 0; j < params->maxl; j++) {
             buf[4*j] = result->scov[j];
@@ -321,12 +323,13 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
         buf[4*params->maxl + 1] = result->vd;
         
         if (rank != 0) {
-            MPI_Send(buf, count, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
-            
+            error_code = MPI_Send(buf, count, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
+			check_mpi_error_code(error_code, "MPI_Send", func_name);
         } else {
             for (j = 0; j < numprocs; j++) {
                 if (j != 0) {
-                    MPI_Recv(buf, count, MPI_DOUBLE, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    error_code = MPI_Recv(buf, count, MPI_DOUBLE, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+					check_mpi_error_code(error_code, "MPI_Recv", func_name);
                 }
                 
                 for (k = 0; k < params->maxl; k++) {
@@ -362,7 +365,8 @@ int t2_calc(hgt_stat_mean *** t2means,
              int rank,
              int numprocs,
              const gsl_rng * rng) {
-    int i, j, k, count, dim, dest, tag, linkage_sizes[3], max_linkage;
+    int i, j, k, count, dim, dest, tag, linkage_sizes[3], max_linkage, error_code;
+	char * func_name = "t2_calc";
     max_linkage = 3;
     dim = 1 + params->linkage_size;
     count = params->sample_size * dim * max_linkage;
@@ -387,12 +391,14 @@ int t2_calc(hgt_stat_mean *** t2means,
         }
         
         if (rank != 0) {
-            MPI_Send(buf, count, MPI_UNSIGNED_LONG, dest, tag, MPI_COMM_WORLD);
+            error_code = MPI_Send(buf, count, MPI_UNSIGNED_LONG, dest, tag, MPI_COMM_WORLD);
+			check_mpi_error_code(error_code, "MPI_Send", func_name);
         } else {
             for (j = 0; j < numprocs; j++) {
                 if (j != 0) {
                     // recieve data from worker nodes.
-                    MPI_Recv(buf, count, MPI_UNSIGNED_LONG, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                    error_code = MPI_Recv(buf, count, MPI_UNSIGNED_LONG, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+					check_mpi_error_code(error_code, "MPI_Recv", func_name);
                 }
                 update_t2(t2means, t2vars, buf, max_linkage, dim, params->sample_size, generation);
             }
@@ -546,4 +552,10 @@ int write_ks(FILE *fp, unsigned long maxl, hgt_stat_mean ***means, hgt_stat_vari
     fprintf(fp, "%g\t%g\t%g\t%g\t%lu\t%lu\n", hgt_stat_mean_get(means[maxl][0]), hgt_stat_mean_get(means[maxl][1]), hgt_stat_variance_get(vars[maxl][0]), hgt_stat_variance_get(vars[maxl][1]), hgt_stat_mean_get_n(means[maxl][0]), gen);
     fflush(fp);
     return EXIT_SUCCESS;
+}
+
+int check_mpi_error_code(int error_code, char *ops_type, char *parent_func) {
+	if (error_code != MPI_SUBVERSION) {
+		printf("error when %s with error code %d in func %s\n", ops_type, error_code, parent_func);
+	}
 }

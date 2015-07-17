@@ -648,10 +648,15 @@ int hgt_pop_calc_pxy_fft(double *pxy, unsigned int maxl, double *d1, double *d2,
     unsigned long fft_len;
     int i, j, l;
     fft_len = next_power2(len);
-    
-    double ds1[2][2*fft_len];
-    double ds2[2][2*fft_len];
-    double mask[2*fft_len];
+	double **ds1, **ds2;
+	ds1 = (double **)malloc(2 *sizeof(double*));
+	ds2 = (double **)malloc(2 *sizeof(double*));
+	for (i = 0; i < 2; i++) {
+		ds1[i] = (double *)malloc(2 * fft_len*sizeof(double));
+		ds2[i] = (double *)malloc(2 * fft_len*sizeof(double));
+	}
+	double *mask;
+	mask = (double *)malloc(2 * fft_len * sizeof(double));
     for (i = 0; i < 2*fft_len; i++) {
         if (i < len) {
             ds1[1][i] = d1[i%len];
@@ -684,8 +689,9 @@ int hgt_pop_calc_pxy_fft(double *pxy, unsigned int maxl, double *d1, double *d2,
     
     hgt_corr_auto_fft(mask, fft_len);
     
-    double buf1[2*fft_len];
-    double buf2[2*fft_len];
+	double *buf1, *buf2;
+	buf1 = (double *)malloc(2 * fft_len*sizeof(double));
+	buf2 = (double *)malloc(2 * fft_len*sizeof(double));
     for (i = 0; i < 2; i++) {
         for (j = 0; j < 2; j++) {
             for (l = 0; l < 2*fft_len; l++) {
@@ -720,6 +726,16 @@ int hgt_pop_calc_pxy_fft(double *pxy, unsigned int maxl, double *d1, double *d2,
             pxy[2*i+j] /= 2.0;
         }
     }
+
+	for (i = 0; i < 2; i++) {
+		free(ds1[i]);
+		free(ds2[i]);
+	}
+	free(ds1);
+	free(ds2);
+	free(mask);
+	free(buf1);
+	free(buf2);
     
     return EXIT_SUCCESS;
 }
@@ -821,12 +837,15 @@ int hgt_pop_calc_coal_time(hgt_linkage ** pop_linkages, int size,
     hgt_linkage_find_time_func find_func,
     const gsl_rng *r) {
 
-    int i, j, a[linkage_size], b[size];
+    int i, j;
+	int *a, *b;
+	a = (int *)malloc(linkage_size * sizeof(int));
+	b = (int *)malloc(size * sizeof(int));
     for (i = 0; i < size; i++) {
         b[i] = i;
     }
 
-    hgt_linkage * linkages[linkage_size];
+    hgt_linkage ** linkages = (hgt_linkage**) malloc(linkage_size * sizeof(hgt_linkage*));
 
     for (i = 0; i < sample_size; i++) {
         gsl_ran_choose(r, a, linkage_size, b, size, sizeof(int));
@@ -836,6 +855,9 @@ int hgt_pop_calc_coal_time(hgt_linkage ** pop_linkages, int size,
         res[i] = find_func(linkages, linkage_size);
     }
 
+	free(a);
+	free(b);
+	free(linkages);
     return EXIT_SUCCESS;
 }
 
