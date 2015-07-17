@@ -19,6 +19,10 @@
 #include "hgt_params.h"
 #include "asprintf.h"
 
+#ifndef MPI_SUCCESS
+    #define MPI_SUCCESS 0
+#endif
+
 int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int dim, int max_linkage, int sample_size, unsigned long generation);
 int check_mpi_error_code(int error_code, char * ops_type, char * parent_func);
 int main(int argc, char *argv[]) {
@@ -558,4 +562,5 @@ int check_mpi_error_code(int error_code, char *ops_type, char *parent_func) {
 	if (error_code != MPI_SUBVERSION) {
 		printf("error when %s with error code %d in func %s\n", ops_type, error_code, parent_func);
 	}
+    return EXIT_SUCCESS;
 }
