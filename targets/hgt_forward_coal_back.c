@@ -123,9 +123,12 @@ int sample(hgt_pop **ps, hgt_params *params,
             unsigned long coal_time, time;
             gsl_ran_choose(r, linkages, linkage_size, p->linkages, p->size, sizeof(hgt_linkage*));
             time = hgt_linkage_find_most_rescent_ancestor_time(linkages, linkage_size);
-            coal_time = gen - time + 1;
-            coal_evolve(params, linkage_size, params->seq_len, coal_time, gen, files, r);
-            write_t2(files->t2, coal_time, gen);
+            if (time > 0) {
+                coal_time = gen - time + 1;
+                coal_evolve(params, linkage_size, params->seq_len, coal_time, gen, files, r);
+                write_t2(files->t2, coal_time, gen);
+            }
+            
         }
         flush_file_container(files);
     }
