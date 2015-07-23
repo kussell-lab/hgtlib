@@ -69,13 +69,20 @@ exit:
 }
 
 file_container * create_file_container(char * prefix) {
+    FILE *create_file(char *prefix, char *appdix);
     file_container *fc = malloc(sizeof(file_container));
-    char * fn;
-    asprintf(&fn, "%s.p2.txt", prefix);
-    fc->p2 = fopen(fn, "w");
-    
-    free(fn);
+    fc->p2 = create_file(prefix, "p2");
+    fc->t2 = create_file(prefix, "t2");
     return fc;
+}
+
+FILE * create_file(char *prefix, char *appdix) {
+    char *fn;
+    asprintf(&fn, "%s.%s.txt", prefix, appdix);
+    FILE *f;
+    f = fopen(fn, "w");
+    free(fn);
+    return f;
 }
 
 int destroy_file_container(file_container *fc) {
@@ -85,6 +92,13 @@ int destroy_file_container(file_container *fc) {
 
 int close_file_container(file_container *fc) {
     fclose(fc->p2);
+    fclose(fc->t2);
+    return EXIT_SUCCESS;
+}
+
+int flush_file_container(file_container *fc) {
+    fflush(fc->t2);
+    fflush(fc->p2);
     return EXIT_SUCCESS;
 }
 
@@ -110,7 +124,9 @@ int sample(hgt_pop **ps, hgt_params *params,
             gsl_ran_choose(r, linkages, linkage_size, p->linkages, p->size, sizeof(hgt_linkage*));
             coal_time = hgt_linkage_find_most_rescent_ancestor_time(linkages, linkage_size);
             coal_evolve(params, linkage_size, params->seq_len, coal_time, gen, files, r);
+            write_t2(files->t2, coal_time, gen);
         }
+        flush_file_container(files);
     }
     
     return EXIT_SUCCESS;
@@ -163,7 +179,11 @@ int write_pxy(FILE *f, double *pxy, int maxl, unsigned long gen) {
         }
         fprintf(f, "%lu\n", gen);
     }
-    fflush(f);
+    return EXIT_SUCCESS;
+}
+
+int write_t2(FILE *f, double time, unsigned long gen) {
+    fprintf(f, "%g\t%lu\n", time, gen);
     return EXIT_SUCCESS;
 }
 

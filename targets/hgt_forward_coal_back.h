@@ -3,6 +3,7 @@
 typedef struct _file_container file_container;
 struct _file_container {
     FILE *p2;
+    FILE *t2;
 };
 file_container * create_file_container(char * prefix);
 int destroy_file_container(file_container *fc);
@@ -19,4 +20,6 @@ int random_seq(char * seq, int seq_len, const gsl_rng * r);
 int sample(hgt_pop **ps, hgt_params *params,
            int linkage_size, unsigned long gen, file_container *files,
            const gsl_rng *r);
+int write_t2(FILE *f, double time, unsigned long gen);
+int flush_file_container(file_container *fc);
 #endif
