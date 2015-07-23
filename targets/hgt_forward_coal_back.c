@@ -53,7 +53,8 @@ int main(int argc, char *argv[]) {
     
     file_container *fc = create_file_container(params->prefix);
     
-    for (int i = 0; i < params->sample_time; i++) {
+    int i;
+    for (i = 0; i < params->sample_time; i++) {
         unsigned long current_generation;
         current_generation = (i + 1) * params->generations;
         hgt_utils_batch_evolve(ps, params->replicates, params, sample_f, coal_time_f, frag_f, r);
@@ -99,10 +100,11 @@ int sample(hgt_pop **ps, hgt_params *params,
     // allocate
     linkages = malloc(linkage_size * sizeof(hgt_linkage*));
 
-    for (int i = 0; i < params->replicates; i++) {
+    int i;
+    for (i = 0; i < params->replicates; i++) {
         hgt_pop *p = ps[i];
-
-        for (int s = 0; s < params->sample_size; ++s)
+        int s;
+        for (s = 0; s < params->sample_size; ++s)
         {
             unsigned long coal_time;
             gsl_ran_choose(r, linkages, linkage_size, p->linkages, p->size, sizeof(hgt_linkage*));
@@ -125,8 +127,9 @@ int coal_evolve(hgt_params *params, int size, int length, unsigned long time, un
 
 int calc_pxy(hgt_genome **genomes, int size, int maxl, file_container *files, unsigned long gen) {
     int calc_p2(hgt_genome *g1, hgt_genome *g2, int maxl, FILE *f, unsigned long gen);
-    for (int i = 0; i < size; i++) {
-        for (int j = i+1; j < size; j++) {
+    int i, j;
+    for (i = 0; i < size; i++) {
+        for (j = i+1; j < size; j++) {
             hgt_genome *g1, *g2;
             g1 = genomes[i];
             g2 = genomes[j];
@@ -152,9 +155,10 @@ int calc_p2(hgt_genome *g1, hgt_genome *g2, int maxl, FILE *f, unsigned long gen
 }
 
 int write_pxy(FILE *f, double *pxy, int maxl, unsigned long gen) {
-    for (int j = 0; j < maxl; j++) {
+    int i, j;
+    for (j = 0; j < maxl; j++) {
         fprintf(f, "%d\t", j);
-        for (int i = 0; i < 4; i++) {
+        for (i = 0; i < 4; i++) {
             fprintf(f, "%g\t", pxy[4*j+i]);
         }
         fprintf(f, "%lu\n", gen);
@@ -170,7 +174,8 @@ hgt_genome ** create_genomes(int size, int length, const gsl_rng * r) {
     random_seq(ancestor, length, r);
     
     hgt_genome ** genomes = malloc(size * sizeof(hgt_genome*));
-    for (int i = 0; i < size; i++) {
+    int i;
+    for (i = 0; i < size; i++) {
         genomes[i] = hgt_genome_new(ancestor, length, 1);
     }
     
@@ -180,7 +185,8 @@ hgt_genome ** create_genomes(int size, int length, const gsl_rng * r) {
 }
 
 int destroy_genomes(hgt_genome **genomes, int size) {
-    for (int i = 0; i < size; i++) {
+    int i;
+    for (i = 0; i < size; i++) {
         hgt_genome_free(genomes[i]);
     }
     free(genomes);
@@ -188,7 +194,8 @@ int destroy_genomes(hgt_genome **genomes, int size) {
 }
 
 int mutate_genomes(hgt_genome **genomes, int size, double mutation_rate, unsigned long time, const gsl_rng *r) {
-    for (int i = 0; i < size; i++) {
+    int i;
+    for (i = 0; i < size; i++) {
         hgt_genome *g = genomes[i];
         int length = hgt_genome_get_seq_size(g);
         double mu = mutation_rate * (double) length;
@@ -202,9 +209,10 @@ int mutate_genomes(hgt_genome **genomes, int size, double mutation_rate, unsigne
 }
 
 int compare_genomes(hgt_genome *g1, hgt_genome *g2, double *distance, int length) {
+    int i;
     char *s1 = hgt_genome_get_seq(g1);
     char *s2 = hgt_genome_get_seq(g2);
-    for (int i = 0; i < length; i++) {
+    for (i = 0; i < length; i++) {
         if (s1[i] != s2[i]) {
             distance[i] = 1.0;
         } else {
