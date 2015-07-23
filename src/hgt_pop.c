@@ -539,7 +539,7 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
 
 
 double hgt_pop_coal_time_moran(unsigned long p_size, const gsl_rng *r) {
-    return gsl_ran_exponential(r, 1.0 / (double) p_size);
+    return 1.0 / (double) p_size;
 }
 
 double hgt_pop_coal_time_wf(unsigned long p_size, const gsl_rng *r) {

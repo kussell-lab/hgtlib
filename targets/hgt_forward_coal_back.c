@@ -200,7 +200,8 @@ int mutate_genomes(hgt_genome **genomes, int size, double mutation_rate, unsigne
         int length = hgt_genome_get_seq_size(g);
         double mu = mutation_rate * (double) length;
         int count = gsl_ran_poisson(r, mu);
-        for (int c = 0; c < count; c++) {
+        int c;
+	for (c = 0; c < count; c++) {
             int pos = gsl_rng_uniform_int(r, length);
             hgt_genome_mutate(g, pos, r);
         }
