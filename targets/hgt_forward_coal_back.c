@@ -120,11 +120,12 @@ int sample(hgt_pop **ps, hgt_params *params,
         int s;
         for (s = 0; s < params->sample_size; ++s)
         {
-            unsigned long coal_time, time;
+            unsigned long time;
+            double coal_time;
             gsl_ran_choose(r, linkages, linkage_size, p->linkages, p->size, sizeof(hgt_linkage*));
             time = hgt_linkage_find_most_rescent_ancestor_time(linkages, linkage_size);
             if (time > 0) {
-                coal_time = gen - time + 1;
+                coal_time = (double)(gen - time + 1)/(double)p->size;
                 coal_evolve(params, linkage_size, params->seq_len, coal_time, gen, files, r);
                 write_t2(files->t2, coal_time, gen);
             }
@@ -136,7 +137,7 @@ int sample(hgt_pop **ps, hgt_params *params,
     return EXIT_SUCCESS;
 }
 
-int coal_evolve(hgt_params *params, int size, int length, unsigned long time, unsigned long gen, file_container *files, const gsl_rng *r) {
+int coal_evolve(hgt_params *params, int size, int length, double time, unsigned long gen, file_container *files, const gsl_rng *r) {
     double mutation_rate = params->mu_rate;
     hgt_genome **genomes = create_genomes(size, length, r);
     mutate_genomes(genomes, size, mutation_rate, time, r);
@@ -217,15 +218,15 @@ int destroy_genomes(hgt_genome **genomes, int size) {
     return EXIT_SUCCESS;
 }
 
-int mutate_genomes(hgt_genome **genomes, int size, double mutation_rate, unsigned long time, const gsl_rng *r) {
+int mutate_genomes(hgt_genome **genomes, int size, double mutation_rate, double time, const gsl_rng *r) {
     int i;
     for (i = 0; i < size; i++) {
         hgt_genome *g = genomes[i];
         int length = hgt_genome_get_seq_size(g);
-        double mu = mutation_rate * (double) length;
+        double mu = mutation_rate * (double) length * time;
         int count = gsl_ran_poisson(r, mu);
         int c;
-	for (c = 0; c < count; c++) {
+        for (c = 0; c < count; c++) {
             int pos = gsl_rng_uniform_int(r, length);
             hgt_genome_mutate(g, pos, r);
         }
