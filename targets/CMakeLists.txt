@@ -10,6 +10,7 @@ add_executable(hgt_mpi_moran_const hgt_mpi_moran_const.c)
 target_link_libraries(hgt_mpi_moran_const ${LIBS})
 install(TARGETS hgt_mpi_moran_const DESTINATION bin)
 
+set(LIBS ${LIBS} ${GSL_LIBRARIES} hgt bstrlib argtable3 asprintf)
 add_executable(hgt_forward_coal_back hgt_forward_coal_back.c)
 target_link_libraries(hgt_forward_coal_back ${LIBS})
 install(TARGETS hgt_forward_coal_back DESTINATION bin)
