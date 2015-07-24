@@ -1,18 +1,17 @@
 find_package(MPI REQUIRED)
 find_package(GSL REQUIRED)
 
+set(COMM_LIBS ${GSL_LIBRARIES} hgt bstrlib argtable3 asprintf)
 include_directories(${GSL_INCLUDE_DIR} ${MPI_INCLUDE_PATH} . ../src ../bstrlib ../asprintf)
-set(LIBS ${LIBS} ${MPI_LIBRARIES} ${GSL_LIBRARIES} hgt bstrlib argtable3 asprintf)
-MESSAGE(STATUS ${MPI_INCLUDE_PATH})
 
 set(CMAKE_C_COMPILER cc)
+
 add_executable(hgt_mpi_moran_const hgt_mpi_moran_const.c)
-target_link_libraries(hgt_mpi_moran_const ${LIBS})
+target_link_libraries(hgt_mpi_moran_const ${MPI_LIBRARIES} ${COMM_LIBS})
 install(TARGETS hgt_mpi_moran_const DESTINATION bin)
 
-set(LIBS ${LIBS} ${GSL_LIBRARIES} hgt bstrlib argtable3 asprintf)
 add_executable(hgt_forward_coal_back hgt_forward_coal_back.c)
-target_link_libraries(hgt_forward_coal_back ${LIBS})
+target_link_libraries(hgt_forward_coal_back ${COMM_LIBS})
 install(TARGETS hgt_forward_coal_back DESTINATION bin)
 
 if(WIN32)
