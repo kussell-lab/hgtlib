@@ -46,8 +46,12 @@ int main(int argc, char* argv[])
     gsl_rng_set(r, seed);
 
     // allocate populations.
+    int temp_seq_len = params->seq_len;
+    params->fitness_size = 1;
+    params->seq_len = 1;
     hgt_pop** ps;
     ps = hgt_utils_alloc_populations(params, 0, r);
+    params->seq_len = temp_seq_len;
 
     // specify process functions.
     hgt_pop_sample_func sample_f = hgt_pop_sample_moran;
