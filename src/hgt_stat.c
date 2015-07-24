@@ -199,3 +199,51 @@ void hgt_stat_standard_deviation_clean(hgt_stat_standard_deviation *std){
     hgt_stat_variance_clean(std->var);
 }
 
+// mean variance.
+hgt_stat_meanvar *hgt_stat_meanvar_new() {
+    hgt_stat_meanvar *mv;
+    mv = (hgt_stat_meanvar *) malloc(sizeof(hgt_stat_meanvar));
+    mv->mean = hgt_stat_mean_alloc();
+    mv->var = hgt_stat_variance_alloc();
+    return mv;
+}
+
+void hgt_stat_meanvar_destroy(hgt_stat_meanvar *mv) {
+    hgt_stat_mean_free(mv->mean);
+    hgt_stat_variance_free(mv->var);
+    free(mv);
+}
+
+void hgt_stat_meanvar_increment(hgt_stat_meanvar *mv, double v) {
+    hgt_stat_mean_increment(mv->mean, v);
+    hgt_stat_variance_increment(mv->var, v);
+}
+
+hgt_stat_meanvar_list *hgt_stat_meanvar_list_new(int n) {
+    hgt_stat_meanvar_list *list;
+    list = (hgt_stat_meanvar_list *) malloc(sizeof(hgt_stat_meanvar_list));
+    list->meanvars = (hgt_stat_meanvar **) malloc(n * sizeof(hgt_stat_meanvar*));
+    int i;
+    for (i = 0; i < n; i++) {
+        list->meanvars[i] = hgt_stat_meanvar_new();
+    }
+    list->n = n;
+    return list;
+}
+
+void hgt_stat_meanvar_list_destroy(hgt_stat_meanvar_list *l) {
+    int i;
+    for (i = 0; i < l->n; i++) {
+        hgt_stat_meanvar_destroy(l->meanvars[i]);
+    }
+    free(l);
+}
+
+void hgt_stat_meanvar_list_increment(hgt_stat_meanvar_list *l, int i, double v) {
+    hgt_stat_meanvar *mv = hgt_stat_meanvar_list_get(l, i);
+    hgt_stat_meanvar_increment(mv, v);
+}
+
+hgt_stat_meanvar *hgt_stat_meanvar_list_get(hgt_stat_meanvar_list *l, int i) {
+    return l->meanvars[i];
+}

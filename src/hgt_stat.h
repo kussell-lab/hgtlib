@@ -73,4 +73,23 @@ unsigned long hgt_stat_standard_deviation_get_n(hgt_stat_standard_deviation *std
 void hgt_stat_standard_deviation_free(hgt_stat_standard_deviation *std);
 void hgt_stat_standard_deviation_clean(hgt_stat_standard_deviation *std);
 
+// Mean and Variance.
+typedef struct {
+    hgt_stat_mean *mean;
+    hgt_stat_variance *var;
+} hgt_stat_meanvar;
+hgt_stat_meanvar *hgt_stat_meanvar_new();
+void hgt_stat_meanvar_destroy(hgt_stat_meanvar *mv);
+void hgt_stat_meanvar_increment(hgt_stat_meanvar *mv, double v);
+
+// MeanVar list.
+typedef struct{
+    int n;
+    hgt_stat_meanvar **meanvars;
+} hgt_stat_meanvar_list;
+hgt_stat_meanvar_list *hgt_stat_meanvar_list_new(int n);
+void hgt_stat_meanvar_list_destroy(hgt_stat_meanvar_list *l);
+void hgt_stat_meanvar_list_increment(hgt_stat_meanvar_list *l, int i, double v);
+hgt_stat_meanvar *hgt_stat_meanvar_list_get(hgt_stat_meanvar_list *l, int i);
+
 #endif
