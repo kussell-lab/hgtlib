@@ -125,3 +125,14 @@ unsigned int hgt_genome_get_fitness_size(hgt_genome *g) {
     size = g->fitness_size;
     return size;
 }
+
+char * hgt_genome_random_sequence(int length, const gsl_rng *r) {
+    char * seq = (char *) malloc((length+1) * sizeof(char));
+    int i;
+    for (i = 0; i < length; i++) {
+        int idx = (int) gsl_rng_uniform_int(r, NUM_DNA_CHAR);
+        seq[i] = DNA[idx];
+    }
+    seq[length] = '\0';
+    return seq;
+}

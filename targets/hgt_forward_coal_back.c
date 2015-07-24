@@ -243,8 +243,7 @@ int write_t2(FILE* f, hgt_stat_meanvar *mv, unsigned long gen)
 hgt_genome** create_genomes(int size, int length, const gsl_rng* r)
 {
     int random_seq(char* seq, int length, const gsl_rng* r);
-    char* ancestor = malloc(length * sizeof(char));
-    random_seq(ancestor, length, r);
+    char* ancestor = hgt_genome_random_sequence(length, r);
 
     hgt_genome** genomes = malloc(size * sizeof(hgt_genome*));
     int i;
