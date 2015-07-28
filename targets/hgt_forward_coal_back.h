@@ -2,7 +2,8 @@
 #define hgt_forward_coal_back_h
 typedef struct _file_container file_container;
 struct _file_container {
-    FILE *p2;
+    FILE *coal_p2;
+	FILE *forw_p2;
     FILE *t2;
 };
 file_container * create_file_container(char * prefix);
@@ -20,7 +21,7 @@ double *compare_genomes(hgt_genome *g1, hgt_genome *g2);
 int random_seq(char * seq, int seq_len, const gsl_rng * r);
 int sample(hgt_pop **ps, hgt_params *params,
            int linkage_size,
-           hgt_pop_coal_time_func coal_time_f, unsigned long gen, file_container *files,
+           hgt_pop_coal_time_func coal_time_f, file_container *files,
            const gsl_rng *r);
 int update_t2(hgt_stat_meanvar *mv, double t2);
 int write_t2(FILE *f, hgt_stat_meanvar *mv, unsigned long gen);

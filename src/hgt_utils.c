@@ -159,7 +159,7 @@ int hgt_utils_batch_evolve_moran_expon_frag(hgt_pop ** pops, int num, hgt_params
 int hgt_utils_batch_evolve(hgt_pop **ps, int num, hgt_params *params, hgt_pop_sample_func sample_func, hgt_pop_coal_time_func coal_time_func, hgt_pop_frag_func frag_f, gsl_rng *r) {
     int i, j;
     for (i = 0; i < num; i++) {
-        for (j = 0; j < params->generations; j++) {
+        for (j = 0; j < params->sample_generations; j++) {
             hgt_pop_evolve(ps[i], params, sample_func, coal_time_func, frag_f, r);
         }
     }

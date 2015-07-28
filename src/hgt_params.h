@@ -28,6 +28,7 @@ struct _hgt_params {
     unsigned int sample_time;  // sample time
     unsigned int replicates;   // replicates
     unsigned int maxl;         // maxl
+	unsigned int sample_generations; // sample generations
     
     // output parameters
     char * prefix;

@@ -491,44 +491,50 @@ double hgt_pop_frag_exp(hgt_params *params, const gsl_rng *r) {
 }
 
 int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, hgt_pop_frag_func frag_f, const gsl_rng *r) {
-    double mu, total;
-    unsigned int count, k, frag_len;
-    int i;
-    double weights[3];
-    
     sample_f(p, r);
     
     // mutate fitness.
     double fitness_mutation_rate = params->fitness_mutation_rate * (double) p->size;
     if (fitness_mutation_rate > 0) {
+		double mu;
+		int count;
         mu = c_time_f(p->size, r) * fitness_mutation_rate;
         count = gsl_ran_poisson(r, mu);
+		int k;
         for (k = 0; k < count; k++) {
             hgt_pop_fitness_mutate_step(p, params, r);
         }
     }
 
     // neutral sites mutation and transfer.
-    int weight_size;
-    weight_size = 2;
-    weights[0] = params->mu_rate * (double) (p->seq_len * p->size);
-    weights[1] = params->tr_rate * (double) (p->seq_len * p->size);
-    total = 0;
-    for (i = 0; i < weight_size; i ++) {
-        total += weights[i];
-    }
+	int g;
+	for (g = 0; g < p->size; g++)
+	{
+		double weights[2];
+		int weigth_size = 2;
+		weights[0] = params->mu_rate * (double)p->seq_len;
+		weights[1] = params->tr_rate * (double)p->seq_len;
+		double total = weights[0] + weights[1];
+		double mu = c_time_f(p->size, r) * total;
+		int count = gsl_ran_poisson(r, mu);
+		int k;
+		for (k = 0; k < count; k++)
+		{
+			int chose = hgt_utils_Roulette_Wheel_select(weights, weigth_size, r);
+			int pos = gsl_rng_uniform_int(r, p->seq_len);
+			if (chose == 0) {
+				hgt_genome_mutate(p->genomes[g], pos, r);
+			}
+			else {
+				int donor_index = gsl_rng_uniform_int(r, p->size);
+				hgt_genome *receiver = p->genomes[g];
+				hgt_genome *donor = p->genomes[donor_index];
+				int frag_len = frag_f(params, r);
+				hgt_genome_transfer(receiver, donor, pos, frag_len);
+			}
+		}
 
-    mu = c_time_f(p->size, r) * total;
-    count = gsl_ran_poisson(r, mu);
-    for (k = 0; k < count; k ++) {
-        i = hgt_utils_Roulette_Wheel_select(weights, weight_size, r);
-        if (i == 0) {
-            hgt_pop_mutate(p, params, r);
-        } else {
-            frag_len = (unsigned int) frag_f(params, r);
-            hgt_pop_transfer(p, params, frag_len, r);
-        }
-    }
+	}
     
     if (p->generation % 10 == 0) {
         hgt_pop_prune_linkages(p);
