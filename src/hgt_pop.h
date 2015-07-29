@@ -12,6 +12,9 @@
 
 #include "bstrlib.h"
 #include "hgt_cov.h"
+#include "hgt_genome.h"
+#include "hgt_linkage.h"
+#include "hgt_params.h"
 #include <gsl/gsl_rng.h>
 
 #define MORAN 0;
@@ -20,107 +23,45 @@
 #define CONSTANT_FRAG 0;
 #define EXP_FRAG 1;
 
-typedef struct hgt_pop_linkage hgt_pop_linkage;
-typedef struct hgt_pop hgt_pop;
-typedef struct hgt_pop_params hgt_pop_params;
+typedef struct _hgt_pop hgt_pop;
 
-struct hgt_pop {
-    unsigned long size;     // population size
-    unsigned long seq_len;  // genome length
-    unsigned long generation;
-    char ** genomes;        // genome sequences
-    double *fitness;        // genome fitness
-    hgt_pop_linkage ** linkages; // linkages.
-    hgt_pop_linkage *** locus_linkages; // locus linkages.
+struct _hgt_pop {
+    unsigned int size;     // population size
+    unsigned int seq_len;  // genome length
+    unsigned int generation;
+    hgt_genome ** genomes;        // genome sequences
+    hgt_linkage ** linkages; // linkages.
+    hgt_linkage *** locus_linkages; // locus linkages.
     
     int ** transfer_hotspots; // transfer hotspots
     
     // cache
-    unsigned long * survived;
-    unsigned long * new_born;
+    unsigned int * survived;
+    unsigned int * new_born;
     int cache_allocated;
     int linkage_size;
     int target_size; // target population size.
 };
 
-struct hgt_pop_params {
-    // population parameters
-    unsigned long size;     // population size
-    unsigned long seq_len;  // genome length
-    
-    // transfer parameters
-    double tr_rate;                             // transfer rate
-    unsigned long frag_len;                     // fragment length
-    unsigned int tr_hotspot_num;                // number of hotspot in the genome
-    unsigned long tr_hotspot_length;            // length of hotspot
-    double tr_hotspot_ratio;                    // ratio of transfer rate
-    unsigned long **tr_hotspots;                // locations of transfer hotspots
-    
-    // mutation parameters
-    double mu_rate;                     // mutation rate
-    unsigned int mu_hotspot_num;        // number of mutation hotspots
-    unsigned long mu_hotspot_length;    // average hotspot length
-    double mu_hotspot_ratio;            // ratio of mutation rate
-    unsigned long **mu_hotspots;        // locations of mutation hotspots
-    
-    // sample parameters
-    unsigned long generations;          // generations
-    unsigned long sample_size;  // sample size
-    unsigned long sample_time;  // sample time
-    unsigned long replicates;         // replicates
-    unsigned long maxl;         // maxl
-    
-    // output parameters
-    char * prefix;
-    
-    // fitting paramters
-    int fit_range; // fitting range
-    int fit_flat;  // fitting flat
-
-    // fitness
-    double fitness_scale;
-    double fitness_shape;
-    double b_mu_rate;
-
-    // linkage tracking size.
-    int linkage_size;
-    
-    // reproduction model
-    unsigned int reprodution;
-    // fragment type
-    unsigned int frag_type;
-};
-
-struct hgt_pop_linkage {
-    int numChildren;
-    unsigned long birthTime;
-    hgt_pop_linkage * parent;
-};
-
+int hgt_pop_prune_linkages(hgt_pop *p);
 int hgt_pop_calc_fitness(hgt_pop *p, double * fitness);
 
-int hgt_pop_linkage_free(hgt_pop_linkage *l);
-int hgt_pop_linkages_free(hgt_pop_linkage ** linkages, int size);
-hgt_pop_linkage * hgt_pop_linkage_alloc();
-hgt_pop_linkage * hgt_pop_linkage_new(hgt_pop_linkage * parent, unsigned long birthTime);
-typedef unsigned long hgt_pop_linkage_find_time_func(hgt_pop_linkage ** linkages, int size);
-unsigned long hgt_pop_linkage_find_most_rescent_ancestor(hgt_pop_linkage ** linkages, int size);
-unsigned long hgt_pop_linkage_find_most_rescent_coalescence(hgt_pop_linkage ** linkages, int size);
 int hgt_pop_calc_coal_time(
-    hgt_pop_linkage **pop_linkages, 
+    hgt_linkage **pop_linkages,
     int size, 
-    unsigned long sample_size, 
-    unsigned long *res, 
+    unsigned int sample_size,
+    unsigned long *res,
     int linkage_size, 
-    hgt_pop_linkage_find_time_func find_func,
+    hgt_linkage_find_time_func find_func,
     const gsl_rng *r);
-int hgt_pop_calc_most_recent_coal_time(hgt_pop_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
-int hgt_pop_calc_most_recent_ancestor_time(hgt_pop_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
+typedef int (*hgt_pop_calc_most_recent_coal_func) (hgt_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
+int hgt_pop_calc_most_recent_coal_time(hgt_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
+int hgt_pop_calc_most_recent_ancestor_time(hgt_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
 
-hgt_pop * hgt_pop_alloc(hgt_pop_params *params, const gsl_rng * r);
+hgt_pop * hgt_pop_alloc(hgt_params *params, const gsl_rng * r);
 hgt_pop * hgt_pop_copy(hgt_pop * p);
 int hgt_pop_free(hgt_pop * r);
-char *hgt_pop_to_json(hgt_pop *p, hgt_pop_params *params);
+char *hgt_pop_to_json(hgt_pop *p, hgt_params *params);
 
 double hgt_pop_mean_fitness(hgt_pop *p);
 
@@ -134,21 +75,16 @@ double hgt_pop_coal_time_moran(unsigned long p_size, const gsl_rng *r);
 double hgt_pop_coal_time_wf(unsigned long p_size, const gsl_rng *r);
 double hgt_pop_coal_time_linear_selection(unsigned long p_size, const gsl_rng *r);
 
-typedef double (*hgt_pop_frag_func)(hgt_pop_params *params, const gsl_rng *r);
-double hgt_pop_frag_constant(hgt_pop_params *params, const gsl_rng *r);
-double hgt_pop_frag_exp(hgt_pop_params *params, const gsl_rng *r);
+typedef double (*hgt_pop_frag_func)(hgt_params *params, const gsl_rng *r);
+double hgt_pop_frag_constant(hgt_params *params, const gsl_rng *r);
+double hgt_pop_frag_exp(hgt_params *params, const gsl_rng *r);
 
 int hgt_pop_evolve(hgt_pop *p, 
-                   hgt_pop_params *params, 
+                   hgt_params *params, 
                    hgt_pop_sample_func sample_f, 
                    hgt_pop_coal_time_func c_time_f, 
                    hgt_pop_frag_func frag_f, 
                    const gsl_rng *r);
-
-int hgt_pop_params_parse(hgt_pop_params *params, int argc, char **argv, char * progname);
-int hgt_pop_params_free(hgt_pop_params *params);
-int hgt_pop_params_printf(hgt_pop_params *params, FILE *stream);
-hgt_pop_params *hgt_pop_params_alloc();
 
 double hgt_pop_calc_ks(hgt_pop *p);
 
@@ -159,7 +95,9 @@ int hgt_pop_calc_t2(hgt_pop *p, unsigned long sample_size, unsigned long * res, 
 int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample_size, hgt_cov_sample_func sample_func, const gsl_rng *r);
 
 typedef int(*hgt_pop_calc_pxy_func)(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len);
-int hgt_pop_calc_pxy(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
-int hgt_pop_calc_pxy_fft(double *pxy, unsigned long maxl, double *d1, double *d2, unsigned long len, int circular);
+int hgt_pop_calc_pxy(double *pxy, unsigned int maxl, double *d1, double *d2, unsigned int len, int circular);
+int hgt_pop_calc_pxy_fft(double *pxy, unsigned int maxl, double *d1, double *d2, unsigned int len, int circular);
 int hgt_pop_linkage_prune_p(hgt_pop *p);
+
+int hgt_pop_mutate(hgt_pop *p, hgt_params* params, const gsl_rng* r);
 #endif
