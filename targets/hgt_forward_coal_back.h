@@ -5,6 +5,7 @@ struct _file_container {
     FILE *coal_p2;
 	FILE *forw_p2;
     FILE *t2;
+    FILE *t2_spl;
 };
 file_container * create_file_container(char * prefix);
 int destroy_file_container(file_container *fc);
@@ -25,5 +26,6 @@ int sample(hgt_pop **ps, hgt_params *params,
            const gsl_rng *r);
 int update_t2(hgt_stat_meanvar *mv, double t2);
 int write_t2(FILE *f, hgt_stat_meanvar *mv, unsigned long gen);
+int write_t2_all(FILE *f, double t2, unsigned int gen);
 int flush_file_container(file_container *fc);
 #endif

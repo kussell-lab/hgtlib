@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 		}
 	}
 	end = clock();
-	printf("running %lu generations before sampling, using time = %ld sec\n", params->generations, (end - start) / CLOCKS_PER_SEC);
+	printf("running %u generations before sampling, using time = %ld sec\n", params->generations, (end - start) / CLOCKS_PER_SEC);
 
     int i;
     for (i = 0; i < params->sample_time; i++) {
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
             coal_time_f, frag_f, r);
         sample(ps, params, 2, coal_time_f, fc, r);
 		end = clock();
-		printf("running %lu generations at sample %d, using time = %ld sec\n", params->sample_generations, i, (end - start) / CLOCKS_PER_SEC);
+		printf("running %u generations at sample %d, using time = %ld sec\n", params->sample_generations, i, (end - start) / CLOCKS_PER_SEC);
     }
 
     close_file_container(fc);
@@ -98,6 +98,7 @@ file_container* create_file_container(char* prefix)
     fc->coal_p2 = create_file(prefix, "coal_p2");
 	fc->forw_p2 = create_file(prefix, "forw_p2");
     fc->t2 = create_file(prefix, "t2");
+    fc->t2_spl = create_file(prefix, "t2_sample");
     return fc;
 }
 
@@ -128,6 +129,7 @@ int close_file_container(file_container* fc)
 int flush_file_container(file_container* fc)
 {
     fflush(fc->t2);
+    fflush(fc->t2_spl);
     fflush(fc->coal_p2);
 	fflush(fc->forw_p2);
     return EXIT_SUCCESS;
@@ -159,26 +161,49 @@ int sample(hgt_pop** ps, hgt_params* params, int linkage_size, hgt_pop_coal_time
         hgt_stat_meanvar_list *coal_list = hgt_stat_meanvar_list_new(count);
 		hgt_stat_meanvar_list *forw_list = hgt_stat_meanvar_list_new(count);
         hgt_stat_meanvar *t2mv = hgt_stat_meanvar_new();
-        int s;
-        for (s = 0; s < params->sample_size; ++s) {
-            // randomly choose two linear and measure their coalescent time.
-			gsl_ran_choose(r, choose, linkage_size, indices, p->size, sizeof(int));
-			int c;
-			for (c = 0; c < linkage_size; c++)
-			{
-				linkages[c] = p->linkages[choose[c]];
-				genomes[c] = p->genomes[choose[c]];
-			}
-            unsigned long time = hgt_linkage_find_most_rescent_ancestor_time(linkages, linkage_size);
-            // update sample results.
-            if (time > 0) {
-                double coal_time = (double)(gen - time + 1) * coal_time_f(p->size, r);
-                coal_evolve(params, linkage_size, params->seq_len, coal_time, coal_list, r);
+        
+        int h,k;
+        for (h = 0; h < p->size; h++) {
+            for (k = h+1; k < p->size; k++) {
+                choose[0] = h;
+                choose[1] = k;
+                int c;
+                for (c = 0; c < linkage_size; c++)
+                {
+                    linkages[c] = p->linkages[choose[c]];
+                    genomes[c] = p->genomes[choose[c]];
+                }
+                unsigned long time = hgt_linkage_find_most_rescent_ancestor_time(linkages, linkage_size);
+                // update sample results.
+                double factor = 1.0 / (double)p->size;
+                double coal_time = (double)(gen - time + 1) * factor;
+//                printf("%d - %d: %lu, %lu, %g\n", h, k, gen, time, factor);
+//                coal_evolve(params, linkage_size, params->seq_len, coal_time, coal_list, r);
+                write_t2_all(files->t2_spl, coal_time, gen);
                 update_t2(t2mv, coal_time);
-
-				calc_pxy(genomes, linkage_size, params->maxl, forw_list);
+                calc_pxy(genomes, linkage_size, params->maxl, forw_list);
             }
         }
+//        int s;
+//        for (s = 0; s < params->sample_size; ++s) {
+//            // randomly choose two linear and measure their coalescent time.
+//			gsl_ran_choose(r, choose, linkage_size, indices, p->size, sizeof(int));
+//			int c;
+//			for (c = 0; c < linkage_size; c++)
+//			{
+//				linkages[c] = p->linkages[choose[c]];
+//				genomes[c] = p->genomes[choose[c]];
+//			}
+//            unsigned long time = hgt_linkage_find_most_rescent_ancestor_time(linkages, linkage_size);
+//            // update sample results.
+//                double factor = 1.0 / (double)p->size;
+//                double coal_time = (double)(gen - time + 1) * factor;
+//                
+//                coal_evolve(params, linkage_size, params->seq_len, coal_time, coal_list, r);
+//                write_t2_all(files->t2_spl, coal_time, gen);
+//                update_t2(t2mv, coal_time);
+//				calc_pxy(genomes, linkage_size, params->maxl, forw_list);
+//        }
         // write to files.
         write_pxy(files->coal_p2, coal_list, params->maxl, gen);
 		write_pxy(files->forw_p2, forw_list, params->maxl, gen);
@@ -272,6 +297,11 @@ int write_pxy(FILE* f, hgt_stat_meanvar_list *list, int maxl, unsigned long gen)
 
 int update_t2(hgt_stat_meanvar *mv, double t2) {
     hgt_stat_meanvar_increment(mv, t2);
+    return EXIT_SUCCESS;
+}
+
+int write_t2_all(FILE *f, double t2, unsigned int gen) {
+    fprintf(f, "%g\t%u\n", t2, gen);
     return EXIT_SUCCESS;
 }
 
