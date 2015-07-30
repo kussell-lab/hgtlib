@@ -56,13 +56,6 @@ void file_container_close(file_container *fc) {
 }
 
 void file_container_destroy(file_container *fc) {
-	free(fc->cov);
-	free(fc->ks);
-	free(fc->p2);
-	free(fc->p3);
-	free(fc->p4);
-	free(fc->q2);
-	free(fc->t2);
 	free(fc);
 }
 
