@@ -105,7 +105,7 @@ file_container* create_file_container(char* prefix)
 FILE* create_file(char* prefix, char* appdix)
 {
     char fn[100];
-    int cx = snprintf(fn, "%s.%s.txt", prefix, appdix);
+    int cx = snprintf(fn, 100, "%s.%s.txt", prefix, appdix);
 	if (!(cx >= 0 && cx < 100)) {
 		printf("could not create file name!\n");
 		exit(EXIT_FAILURE);
