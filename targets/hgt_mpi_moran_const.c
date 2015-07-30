@@ -17,14 +17,78 @@
 #include "hgt_utils.h"
 #include "bstrlib.h"
 #include "hgt_params.h"
-#include "asprintf.h"
-
 #ifndef MPI_SUCCESS
     #define MPI_SUCCESS 0
 #endif
+FILE* create_file(char* prefix, char* appdix, char *fmt);
+typedef struct _filecontainer file_container;
+struct _filecontainer {
+	FILE *p2;
+	FILE *p3;
+	FILE *p4;
+	FILE *cov;
+	FILE *ks;
+	FILE *t2;
+	FILE *q2;
+};
+
+file_container *create_file_container(char *prefix) {
+	file_container *fc;
+	fc = (file_container *)malloc(sizeof(file_container));
+	fc->p2 = create_file(prefix, "p2", "txt");
+	fc->p3 = create_file(prefix, "p3", "txt");
+	fc->p4 = create_file(prefix, "p4", "txt");
+	fc->cov = create_file(prefix, "cov", "txt");
+	fc->ks = create_file(prefix, "ks", "txt");
+	fc->t2 = create_file(prefix, "t2", "txt");
+	fc->q2 = create_file(prefix, "q2", "txt");
+	return fc;
+}
+
+void file_container_close(file_container *fc) {
+	fclose(fc->p2);
+	fclose(fc->p3);
+	fclose(fc->p4);
+	fclose(fc->cov);
+	fclose(fc->ks);
+	fclose(fc->t2);
+	fclose(fc->q2);
+}
+
+void file_container_destroy(file_container *fc) {
+	free(fc->cov);
+	free(fc->ks);
+	free(fc->p2);
+	free(fc->p3);
+	free(fc->p4);
+	free(fc->q2);
+	free(fc->t2);
+	free(fc);
+}
+
+void file_container_flush(file_container *fc) {
+	fflush(fc->p2);
+	fflush(fc->p3);
+	fflush(fc->p4);
+	fflush(fc->cov);
+	fflush(fc->ks);
+	fflush(fc->t2);
+	fflush(fc->q2);
+}
+
+void file_container_write_headers(file_container *fc) {
+	fprintf(fc->p2, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
+	fprintf(fc->p3, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
+	fprintf(fc->p4, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
+	fprintf(fc->cov, "#l\tscov\trcov\tpxpy\ttcov\tscov var\trcov var\tpxpy var\ttcov var\tsample n\tgenerations\n");
+	fprintf(fc->ks, "#ks\tvd\tvar ks\tvar vd\tgenerations\n");
+	fprintf(fc->t2, "#l\tt2\tt3\tt4\tt2_var\tt3_var\tt4_var\tn\tgeneration\n");
+	fprintf(fc->q2, "#l\tt2\tt3\tt4\tt2_var\tt3_var\tt4_var\tn\tgeneration\n");
+}
 
 int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, unsigned long *buf, int dim, int max_linkage, int sample_size, unsigned long generation);
 int check_mpi_error_code(int error_code, char * ops_type, char * parent_func);
+
 int main(int argc, char *argv[]) {
     int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs);
     int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, double *d1, double *d2,hgt_pop **ps, hgt_params *params, int rank, int numprocs, hgt_cov_sample_func sample_func, gsl_rng *r);
@@ -94,50 +158,11 @@ int main(int argc, char *argv[]) {
         q2means = hgt_utils_alloc_stat_means(linkage_dim, 3);
         q2vars = hgt_utils_alloc_stat_variance(linkage_dim, 3);
     }
-    
-    FILE * fp2; // output p2
-    FILE * fp3; // output p3
-    FILE * fp4; // output p4
-    FILE * fpcov; // output cov
-    FILE * fpks; // output ks
-    FILE * ft2; // output t2
-    FILE * fq2; // output q2
+
+	file_container *fc;
     if (rank == 0) {
-        char * fn;
-        asprintf(&fn, "%s.p2.txt", params->prefix);
-        fp2 = fopen(fn, "w");
-        fprintf(fp2, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
-        free(fn);
-
-        asprintf(&fn, "%s.p3.txt", params->prefix);
-        fp3 = fopen(fn, "w");
-        fprintf(fp3, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
-        free(fn);
-
-        asprintf(&fn, "%s.p4.txt", params->prefix);
-        fp4 = fopen(fn, "w");
-        fprintf(fp4, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
-        free(fn);
-
-        asprintf(&fn, "%s.cov.txt", params->prefix);
-        fpcov = fopen(fn, "w");
-        fprintf(fpcov, "#l\tscov\trcov\tpxpy\ttcov\tscov var\trcov var\tpxpy var\ttcov var\tsample n\tgenerations\n");
-        free(fn);
-
-        asprintf(&fn, "%s.ks.txt", params->prefix);
-        fpks = fopen(fn, "w");
-        fprintf(fpks, "#ks\tvd\tvar ks\tvar vd\tgenerations\n");
-        free(fn);
-
-        asprintf(&fn, "%s.t2.txt", params->prefix);
-        ft2 = fopen(fn, "w");
-        fprintf(ft2, "#l\tt2\tt3\tt4\tt2_var\tt3_var\tt4_var\tn\tgeneration\n");
-        free(fn);
-        
-        asprintf(&fn, "%s.q2.txt", params->prefix);
-        fq2 = fopen(fn, "w");
-        fprintf(fp2, "#l\tt2\tt3\tt4\tt2_var\tt3_var\tt4_var\tn\tgeneration\n");
-        free(fn);
+		fc = create_file_container(params->prefix);
+		file_container_write_headers(fc);
     }
     
     double *pxy = malloc(params->maxl*4*params->sample_size*sizeof(double));
@@ -184,17 +209,17 @@ int main(int argc, char *argv[]) {
         pxy_calc(p4means, p4vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p4, rng);
         
         cov_calc(covmeans, covvars, ps, params, rank, numprocs, rng);
-        t2_calc(t2means, t2vars, params, ps, hgt_pop_calc_most_recent_ancestor_time, ft2, current_generation, rank, numprocs, rng);
-        t2_calc(q2means, q2vars, params, ps, hgt_pop_calc_most_recent_coal_time, fq2, current_generation, rank, numprocs, rng);
+        t2_calc(t2means, t2vars, params, ps, hgt_pop_calc_most_recent_ancestor_time, fc->t2, current_generation, rank, numprocs, rng);
+        t2_calc(q2means, q2vars, params, ps, hgt_pop_calc_most_recent_coal_time, fc->q2, current_generation, rank, numprocs, rng);
         if (rank == 0) {
-            write_pxy(fp2, params->maxl, p2means, p2vars, current_generation);
-            write_pxy(fp3, params->maxl, p3means, p3vars, current_generation);
-            write_pxy(fp4, params->maxl, p4means, p4vars, current_generation);
-            write_cov(fpcov, params->maxl, covmeans, covvars, current_generation);
-            write_ks(fpks, params->maxl, covmeans, covvars, current_generation);
-            write_t2(ft2, t2means, t2vars, linkage_dim, 3, current_generation);
-            write_t2(fq2, q2means, q2vars, linkage_dim, 3, current_generation);
-            
+            write_pxy(fc->p2, params->maxl, p2means, p2vars, current_generation);
+            write_pxy(fc->p3, params->maxl, p3means, p3vars, current_generation);
+            write_pxy(fc->p4, params->maxl, p4means, p4vars, current_generation);
+            write_cov(fc->cov, params->maxl, covmeans, covvars, current_generation);
+            write_ks(fc->ks, params->maxl, covmeans, covvars, current_generation);
+            write_t2(fc->t2, t2means, t2vars, linkage_dim, 3, current_generation);
+            write_t2(fc->q2, q2means, q2vars, linkage_dim, 3, current_generation);
+			file_container_flush(fc);
             
             hgt_utils_clean_stat_means(p2means, params->maxl, 4);
             hgt_utils_clean_stat_means(p3means, params->maxl, 4);
@@ -231,14 +256,9 @@ int main(int argc, char *argv[]) {
         hgt_utils_free_stat_variances(t2vars, linkage_dim, 3);
         hgt_utils_free_stat_means(q2means, linkage_dim, 3);
         hgt_utils_free_stat_variances(q2vars, linkage_dim, 3);
-	printf("rank %d: Free mean and variances!\n", rank);
-        fclose(fp2);
-        fclose(fp3);
-        fclose(fp4);
-        fclose(fpcov);
-        fclose(fpks);
-        fclose(ft2);
-        fclose(fq2);
+		printf("rank %d: Free mean and variances!\n", rank);
+        file_container_close(fc);
+		file_container_destroy(fc);
         printf("Succesffully close all files!\n");
     }
     
@@ -445,11 +465,8 @@ int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs) {
         MPI_Send(rc, blength(b), MPI_CHAR, dest, tag, MPI_COMM_WORLD);
         free(rc);
     } else {
-        char *fn;
-        FILE *fp;
-        asprintf(&fn, "%s_populations.json", params->prefix);
-        fp = fopen(fn, "w");
-        
+		FILE *fp = create_file(params->prefix, "populations", "json");
+       
         fprintf(fp, "[\n");
         MPI_Status status;
         
@@ -472,7 +489,6 @@ int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs) {
         
         fprintf(fp, "]\n");
         fclose(fp);
-        free(fn);
     }
     bdestroy(b);
     
@@ -563,4 +579,17 @@ int check_mpi_error_code(int error_code, char *ops_type, char *parent_func) {
 		printf("error when %s with error code %d in func %s\n", ops_type, error_code, parent_func);
 	}
     return EXIT_SUCCESS;
+}
+
+FILE* create_file(char* prefix, char* appdix, char *file_format)
+{
+	char fn[100];
+	int cx = snprintf(fn, 100, "%s.%s.%s", prefix, appdix, file_format);
+	if (!(cx >= 0 && cx < 100)) {
+		printf("could not create file name!\n");
+		exit(EXIT_FAILURE);
+	}
+	FILE* f;
+	f = fopen(fn, "w");
+	return f;
 }
