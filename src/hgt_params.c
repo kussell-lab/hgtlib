@@ -237,6 +237,7 @@ int hgt_params_check_default(hgt_params *params) {
 int hgt_params_printf(hgt_params *params, FILE *stream) {
     fprintf(stream, "population size = %u\n", params->size);
     fprintf(stream, "genome length = %u\n", params->seq_len);
+	fprintf(stream, "genome alphabet size = %u\n", params->alphabet_size);
     fprintf(stream, "mutation rate = %g\n", params->mu_rate);
     fprintf(stream, "transfer rate = %g\n", params->tr_rate);
     fprintf(stream, "transfer frag = %u\n", params->frag_len);
