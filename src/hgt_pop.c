@@ -18,17 +18,18 @@
 #include "hgt_pop_internal.h"
 
 hgt_pop * hgt_pop_alloc(hgt_params *params, const gsl_rng * r) {
-    char * ancestor;
     int i, j;
 
     hgt_pop * p = (hgt_pop *) malloc (sizeof(hgt_pop));
     
+	// initialize population properities.
     p->size = params->size;
     p->target_size = params->size;
     p->seq_len = params->seq_len;
     p->generation = 0;
     p->linkage_size = params->linkage_size;
-     
+    
+	// create linkages for tracking.
     p->linkages = (hgt_linkage **) malloc(p->size * sizeof(hgt_linkage*));
     for (j = 0; j < p->size; ++j) {
         p->linkages[j] = hgt_linkage_new(NULL, p->generation);
@@ -41,10 +42,12 @@ hgt_pop * hgt_pop_alloc(hgt_params *params, const gsl_rng * r) {
         }
     }
     
+	// create genomes.
     p->genomes = (hgt_genome **) malloc(p->size * sizeof(hgt_genome *));
+	// set genome alphabet size beforing create genome sequences.
+	hgt_genome_set_alphabet_size(params->alphabet_size);
     // random initilize genomes
-    ancestor = malloc((p->seq_len+1) * sizeof(char));
-    random_seq(ancestor, p->seq_len, r);
+	char * ancestor = hgt_genome_random_sequence(p->seq_len, r);
     for (i = 0; i < p->size; i ++) {
         p->genomes[i] = hgt_genome_new(ancestor, p->seq_len, params->fitness_size);
     }
@@ -882,14 +885,6 @@ int hgt_pop_calc_fitness(hgt_pop *p, double * fitness) {
 }
 
 /******** PRIVATE FUNCTIONS ***********/
-int random_seq(char * seq, unsigned long seq_len, const gsl_rng * r) {
-    int i;
-    for (i = 0; i < seq_len; i ++) {
-        seq[i] = DNA[gsl_rng_uniform_int(r, 4)];
-    }
-    seq[i] = '\0';
-    return 0;
-}
 
 unsigned long next_power2(unsigned int len) {
     unsigned int v;

@@ -14,7 +14,9 @@ static int hgt_params_handler(void *params, const char* section, const char* nam
         params1->size = (unsigned int) atoi(value);
     } else if (MATCH("population", "length")) {
         params1->seq_len = (unsigned int) atoi(value);
-    } else if (MATCH("population", "generations")) {
+	} else if (MATCH("genome", "alphabet_size")) {
+		params1->alphabet_size = (unsigned int)atoi(value);
+	} else if (MATCH("population", "generations")) {
         params1->generations = (unsigned int) atoi(value);
     } else if (MATCH("population", "model")){
         params1->reprodution = (unsigned int ) atoi(value);
@@ -79,6 +81,7 @@ int hgt_params_parse_from_ini(hgt_params *params, const char *filename) {
 int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname){
     struct arg_int *size = arg_int0("n", "size", "<unsigned long>", "population size");
     struct arg_int *seq_len = arg_int0("l", "len", "<unsigned long>", "genome length");
+	struct arg_int *alphabet_size = arg_int0("A", "alphabet_size", "<unsigned int>", "alphabet sizse");
     struct arg_int *frag_len = arg_int0("f", "frag", "<unsigned long>", "fragment length");
     struct arg_dbl *mu_rate = arg_dbl0("u", "mu_rate", "<double>", "mutation rate");
     struct arg_dbl *tr_rate = arg_dbl0("t", "tr_rate", "<double>", "transfer rate");
@@ -102,9 +105,9 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     struct arg_int *frag_type = arg_int0("b", "frag_type", "<unsigned int>", "fragment type");
     
     struct arg_lit  *help    = arg_lit0(NULL,"help", "print this help and exit");
-    struct arg_end  *end     = arg_end(25);
+    struct arg_end  *end     = arg_end(26);
     
-    void* argtable[] = {size, seq_len, frag_len, mu_rate, tr_rate, gen, fitness_mutation_rate, fitness_scale, fitness_shape, fitness_coupled, spl_time,
+    void* argtable[] = {size, seq_len, alphabet_size, frag_len, mu_rate, tr_rate, gen, fitness_mutation_rate, fitness_scale, fitness_shape, fitness_coupled, spl_time,
         spl_size, spl_gen, repl, maxl, linkage_size, prefix, config, reproduction, frag_type, help, end};
     int nerrors;
     int exit_code = EXIT_SUCCESS;
@@ -195,6 +198,12 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     } else {
         params->replicates = 1;
     }
+
+	if (alphabet_size->count > 0) {
+		params->alphabet_size = alphabet_size->ival[0];
+	} else {
+		params->alphabet_size = 4;
+	}
 
     hgt_params_check_default(params);
     
