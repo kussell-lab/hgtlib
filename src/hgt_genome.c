@@ -10,13 +10,17 @@
 #include <limits.h>
 #include "hgt_genome.h"
 
-int NUM_DNA_CHAR = 4;
+static int NUM_DNA_CHAR = 4;
 
 int transfer_mutate(hgt_genome *receiver, hgt_genome *donor, int start, int end);
 int hgt_genome_mutate_(hgt_genome *g, unsigned pos, unsigned char_max, const gsl_rng *r);
 
 void hgt_genome_set_alphabet_size(unsigned size) {
 	NUM_DNA_CHAR = size;
+}
+
+int hgt_genome_get_alphabet_size() {
+	return NUM_DNA_CHAR;
 }
 
 hgt_genome * hgt_genome_alloc(unsigned int seq_len, unsigned int fitness_size) {
