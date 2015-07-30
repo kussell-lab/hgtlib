@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "hgt_utils.h"
+#include "hgt_params.h"
 
 // allocate HGT populations
 // num: number of populations to be created
@@ -16,7 +17,7 @@
 // seq_len: genome sequence length
 // rank: identity for MPI process
 // rs: gsl_rng random generators
-hgt_pop ** hgt_utils_alloc_populations(hgt_pop_params *params, int rank, gsl_rng * rng) {
+hgt_pop ** hgt_utils_alloc_populations(hgt_params *params, int rank, gsl_rng * rng) {
     int i;
     unsigned long num = params->replicates;
     hgt_pop ** pops;
@@ -147,18 +148,18 @@ void hgt_utils_increment_stat_variances(hgt_stat_variance *** vars, double ** va
 }
 
 // do batch evoluation
-int hgt_utils_batch_evolve_moran(hgt_pop ** pops, int num, hgt_pop_params * params, gsl_rng *rng) {
+int hgt_utils_batch_evolve_moran(hgt_pop ** pops, int num, hgt_params * params, gsl_rng *rng) {
     return hgt_utils_batch_evolve(pops, num, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, hgt_pop_frag_constant, rng);
 }
 
-int hgt_utils_batch_evolve_moran_expon_frag(hgt_pop ** pops, int num, hgt_pop_params * params, gsl_rng *rng) {
+int hgt_utils_batch_evolve_moran_expon_frag(hgt_pop ** pops, int num, hgt_params * params, gsl_rng *rng) {
     return hgt_utils_batch_evolve(pops, num, params, hgt_pop_sample_moran, hgt_pop_coal_time_moran, hgt_pop_frag_exp, rng);
 }
 
-int hgt_utils_batch_evolve(hgt_pop **ps, int num, hgt_pop_params *params, hgt_pop_sample_func sample_func, hgt_pop_coal_time_func coal_time_func, hgt_pop_frag_func frag_f, gsl_rng *r) {
+int hgt_utils_batch_evolve(hgt_pop **ps, int num, hgt_params *params, hgt_pop_sample_func sample_func, hgt_pop_coal_time_func coal_time_func, hgt_pop_frag_func frag_f, gsl_rng *r) {
     int i, j;
     for (i = 0; i < num; i++) {
-        for (j = 0; j < params->generations; j++) {
+        for (j = 0; j < params->sample_generations; j++) {
             hgt_pop_evolve(ps[i], params, sample_func, coal_time_func, frag_f, r);
         }
     }

@@ -12,8 +12,10 @@
 #include <math.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_statistics.h>
-#include "hgt_pop.c"
+#include "hgt_pop.h"
+#include "hgt_genome.h"
 #include "hgt_predict.h"
+#include "hgt_params.h"
 
 hgt_pop *SMALL_P;
 const gsl_rng *RNG;
@@ -24,7 +26,7 @@ void init() {
     gsl_rng * alloc_rng();
 
     RNG = alloc_rng();
-    hgt_pop_params *params = hgt_pop_params_alloc();
+    hgt_params *params = hgt_params_alloc();
     params->seq_len = SMALL_SEQ_LEN;
     params->size = SMALL_SIZE;
     SMALL_P = hgt_pop_alloc(params, RNG);
@@ -50,7 +52,7 @@ START_TEST (test_hgt_pop_alloc)
     
     size = SMALL_SIZE;
     seq_len = SMALL_SEQ_LEN;
-    hgt_pop_params *params = hgt_pop_params_alloc();
+    hgt_params *params = hgt_params_alloc();
     params->seq_len = SMALL_SEQ_LEN;
     params->size = SMALL_SIZE;
     p = hgt_pop_alloc(params, r);
@@ -60,12 +62,12 @@ START_TEST (test_hgt_pop_alloc)
 
     for (i = 0; i < size; i ++) {
         for (k = 0; k < seq_len; k ++) {
-            ck_assert_msg(p->genomes[0][k] == p->genomes[i][k], "The nucl was not identical at genome %d at position %d", i, k);
+            ck_assert_msg(p->genomes[0]->seq[k] == p->genomes[i]->seq[k], "The nucl was not identical at genome %d at position %d", i, k);
         }
     }
 
     hgt_pop_free(p);
-    hgt_pop_params_free(params);
+    hgt_params_free(params);
 }
 END_TEST
 
@@ -79,7 +81,7 @@ START_TEST (test_hgt_pop_copy)
     
     size = SMALL_SIZE;
     seq_len = SMALL_SEQ_LEN;
-    hgt_pop_params *params = hgt_pop_params_alloc();
+    hgt_params *params = hgt_params_alloc();
     params->seq_len = SMALL_SEQ_LEN;
     params->size = SMALL_SIZE;
     old_p = hgt_pop_alloc(params, r);
@@ -90,20 +92,20 @@ START_TEST (test_hgt_pop_copy)
 
     for (i = 0; i < size; i ++) {
         for (k = 0; k < seq_len; k ++) {
-            ck_assert_msg(p->genomes[0][k] == p->genomes[i][k], "The nucl was not identical at genome %d at position %d", i, k);
+            ck_assert_msg(p->genomes[0]->seq[k] == p->genomes[i]->seq[k], "The nucl was not identical at genome %d at position %d", i, k);
         }
     }
 
     hgt_pop_free(old_p);
     hgt_pop_free(p);
-    hgt_pop_params_free(params);
+    hgt_params_free(params);
 }
 END_TEST
 
-START_TEST (test_hgt_pop_params_parse)
+START_TEST (test_hgt_params_parse)
 {
     int argc, exit_code;
-    char *argv1[] = {"test_hgt_pop_params_parse", 
+    char *argv1[] = {"test_hgt_params_parse", 
                     "-n", "1000", 
                     "-l", "100", 
                     "-u", "1e-3", 
@@ -113,8 +115,8 @@ START_TEST (test_hgt_pop_params_parse)
                     "-o", "test"
                 };
     argc = 15;
-    hgt_pop_params * params = malloc(sizeof(hgt_pop_params));
-    exit_code = hgt_pop_params_parse(params, argc, argv1, "test_hgt_pop_params_parse");
+    hgt_params * params = malloc(sizeof(hgt_params));
+    exit_code = hgt_params_parse(params, argc, argv1, "test_hgt_params_parse");
     
     ck_assert(exit_code == EXIT_SUCCESS);
     ck_assert_msg(params->size == 1000, "Was expecting population size to be %lu, but got %lu", 1000, params->size);
@@ -123,7 +125,7 @@ START_TEST (test_hgt_pop_params_parse)
     ck_assert_msg(fabs(params->mu_rate - 1e-3) < 1e-10, "Was expecting mu_rate to be %g, but got %g", 1e-3, params->mu_rate);
     ck_assert_msg(fabs(params->tr_rate - 1e-4) < 1e-10, "Was expecting tr_rate to be %g, but got %g", 1e-4, params->tr_rate);
 
-    char *argv2[] = {"test_hgt_pop_params_parse", "-n", "1000", 
+    char *argv2[] = {"test_hgt_params_parse", "-n", "1000", 
                     "-l", "100", 
                     "-u", "1e-3", 
                     "-t", "1e-4", 
@@ -135,24 +137,24 @@ START_TEST (test_hgt_pop_params_parse)
                     "-o", "test"
                 };
     argc = 21;
-    hgt_pop_params_parse(params, argc, argv2, "test_hgt_pop_params_parse");
+    hgt_params_parse(params, argc, argv2, "test_hgt_params_parse");
     ck_assert(exit_code == EXIT_SUCCESS);
     ck_assert(params->generations == 10000);
     ck_assert(params->sample_size == 1000);
     ck_assert(params->sample_time == 222);
     ck_assert(params->replicates == 55);
 
-//    char *argv3[] = {"test_hgt_pop_params_parse", "-n", "1000", 
+//    char *argv3[] = {"test_hgt_params_parse", "-n", "1000", 
 //                    "-l", "100", 
 //                    "-u", "1e-3", 
 //                    "-t", "1e-4", 
 //                    "-f", "50"
 //                };
 //    argc = 11;
-//    exit_code = hgt_pop_params_parse(params, argc, argv3, "test_hgt_pop_params_parse");
+//    exit_code = hgt_params_parse(params, argc, argv3, "test_hgt_params_parse");
 //    ck_assert(exit_code == EXIT_FAILURE);
 
-    hgt_pop_params_free(params);
+    hgt_params_free(params);
 }   
 END_TEST
 
@@ -173,9 +175,9 @@ START_TEST (test_hgt_pop_mutate_at)
 
     g = 1;
     s = 7;
-    c = p->genomes[g][s];
-    hgt_pop_mutate_at(p, g, s, r);
-    ck_assert(p->genomes[g][s] != c);
+    c = p->genomes[g]->seq[s];
+    hgt_genome_mutate(p->genomes[g], s, r);
+    ck_assert(p->genomes[g]->seq[s] != c);
 
     for (i = 0; i < 4; i++){
         count[i] = 0;
@@ -183,8 +185,8 @@ START_TEST (test_hgt_pop_mutate_at)
 
     n = 100000;
     for (i = 0; i < n; i++) {
-        hgt_pop_mutate_at(p, g, s, r);
-        switch (p->genomes[g][s]) {
+        hgt_genome_mutate(p->genomes[g], s, r);
+        switch (p->genomes[g]->seq[s]) {
             case 'A':
                 count[0]++;
                 break;
@@ -230,15 +232,16 @@ START_TEST (test_hgt_pop_mutate)
         count[i] = 0;
     }
     
-    hgt_pop_params *params = hgt_pop_params_alloc();
+    hgt_params *params = hgt_params_alloc();
     params->mu_hotspot_num = 0;
     params->tr_hotspot_num = 0;
     params->seq_len = p->seq_len;
     params->size = p->size;
 
     for (i = 0; i < n; i++) {
+        
         hgt_pop_mutate(p, params, r);
-        switch (p->genomes[g][s]) {
+        switch (p->genomes[g]->seq[s]) {
             case 'A':
                 count[0]++;
                 break;
@@ -270,7 +273,7 @@ START_TEST (test_hgt_pop_transfer_at)
     unsigned long donor, reciever, start, frag_len;
     int n, i, k, s;
 
-    hgt_pop_params *params = hgt_pop_params_alloc();
+    hgt_params *params = hgt_params_alloc();
     params->seq_len = p->seq_len;
     params->size = p->size;
     
@@ -287,10 +290,13 @@ START_TEST (test_hgt_pop_transfer_at)
         }
         start = gsl_rng_uniform_int(r, p->seq_len);
         frag_len = gsl_rng_uniform_int(r, p->seq_len);
-        hgt_pop_transfer_at(p, donor, reciever, frag_len, start);
+        hgt_genome_transfer(p->genomes[reciever], p->genomes[donor], frag_len, start);
         for (k = 0; k < frag_len; k++) {
             s = (start + k) % p->size;
-            ck_assert_msg(p->genomes[donor][s] == p->genomes[reciever][s], 
+            char *donor_seq, *reciever_seq;
+            donor_seq = hgt_genome_get_seq(p->genomes[donor]);
+            reciever_seq = hgt_genome_get_seq(p->genomes[reciever]);
+            ck_assert_msg(donor_seq[s] == reciever_seq[s],
                 "not identical at %d, between %lu (%s) and %lu (%s)", s, donor, p->genomes[donor][s], reciever, p->genomes[reciever][s]);
         }
     }
@@ -299,7 +305,7 @@ START_TEST (test_hgt_pop_transfer_at)
 }
 END_TEST
 
-int evolve_and_calc_ks(double * ks, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r) {
+int evolve_and_calc_ks(double * ks, hgt_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r) {
     int i, m;
     for (m = 0; m < params->replicates; m++) {
         hgt_pop *p = hgt_pop_alloc(params, r);
@@ -315,14 +321,14 @@ int evolve_and_calc_ks(double * ks, hgt_pop_params *params, hgt_pop_sample_func 
 }
 
 START_TEST (test_hgt_pop_evolve) {
-    int evolve_and_calc_ks(double * ks, hgt_pop_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r);
+    int evolve_and_calc_ks(double * ks, hgt_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, const gsl_rng *r);
     const gsl_rng *r = RNG;
     unsigned long size, seq_len;
 
     size = 10;
     seq_len = 100;
 
-    hgt_pop_params *params = malloc(sizeof(hgt_pop_params));
+    hgt_params *params = malloc(sizeof(hgt_params));
     params->size = size;
     params->seq_len = seq_len;
     params->frag_len = 10;
@@ -369,7 +375,7 @@ START_TEST (test_hgt_pop_evolve) {
 }
 END_TEST
 
-int evolve_and_calc_dist(hgt_pop_params *params, hgt_cov_sample_func f, int same_dist, const gsl_rng *r) {
+int evolve_and_calc_dist(hgt_params *params, hgt_cov_sample_func f, int same_dist, const gsl_rng *r) {
     int i, j, k;
     
     double ds1arr[params->seq_len][params->replicates];
@@ -451,7 +457,7 @@ START_TEST(test_hgt_pop_calc_dist)
     size = 10;
     seq_len = 10;
     
-    hgt_pop_params *params = malloc(sizeof(hgt_pop_params));
+    hgt_params *params = malloc(sizeof(hgt_params));
     params->size = size;
     params->seq_len = seq_len;
     params->frag_len = 0;
@@ -460,7 +466,7 @@ START_TEST(test_hgt_pop_calc_dist)
     params->sample_size = 100;
     params->tr_rate = 0;
     
-    int evolve_and_calc_dist(hgt_pop_params *params, hgt_cov_sample_func f, int same_dist, const gsl_rng *r);
+    int evolve_and_calc_dist(hgt_params *params, hgt_cov_sample_func f, int same_dist, const gsl_rng *r);
     
     evolve_and_calc_dist(params, hgt_cov_sample_p2, 1, r);
     evolve_and_calc_dist(params, hgt_cov_sample_p3, 0, r);
@@ -538,7 +544,7 @@ START_TEST(test_hgt_pop_calc_pxy)
 }
 END_TEST
 
-int evolve_and_calc_pxy(hgt_pop_params *params, hgt_cov_sample_func f, const gsl_rng *r) {
+int evolve_and_calc_pxy(hgt_params *params, hgt_cov_sample_func f, const gsl_rng *r) {
     int i, j, circular;
     double d1[params->seq_len], d2[params->seq_len];
     double *pxy;
@@ -572,7 +578,7 @@ int evolve_and_calc_pxy(hgt_pop_params *params, hgt_cov_sample_func f, const gsl
 
 START_TEST(test_hgt_pop_calc_pxy_p)
 {
-    hgt_pop_params *params = malloc(sizeof(hgt_pop_params));
+    hgt_params *params = malloc(sizeof(hgt_params));
     params->size = 10;
     params->seq_len = 100;
     params->frag_len = 10;
@@ -583,7 +589,7 @@ START_TEST(test_hgt_pop_calc_pxy_p)
     params->generations = 10*params->size*params->size;
     params->maxl = params->seq_len;
     
-    int evolve_and_calc_pxy(hgt_pop_params *params, hgt_cov_sample_func f, const gsl_rng *r);
+    int evolve_and_calc_pxy(hgt_params *params, hgt_cov_sample_func f, const gsl_rng *r);
     evolve_and_calc_pxy(params, hgt_cov_sample_p2, RNG);
 }
 END_TEST
@@ -595,7 +601,7 @@ hgt_pop_suite (void)
     TCase *tc_core = tcase_create("Core");
     tcase_add_test(tc_core, test_hgt_pop_alloc);
     tcase_add_test(tc_core, test_hgt_pop_copy);
-    tcase_add_test(tc_core, test_hgt_pop_params_parse);
+    tcase_add_test(tc_core, test_hgt_params_parse);
     suite_add_tcase(s, tc_core);
 
     TCase *tc_mut = tcase_create("Mutate");
