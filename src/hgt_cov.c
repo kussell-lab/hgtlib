@@ -116,8 +116,6 @@ int hgt_cov_result_calc_matrix(hgt_cov_result *r, short **matrix, unsigned long 
         r->tcov[i] = r->scov[i] + r->rcov[i] - r->vd;
     }
     
-    
-    
     free(xs);
     free(xy);
     free(smx);

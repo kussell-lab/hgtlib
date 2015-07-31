@@ -18,7 +18,7 @@
 #include "hgt_pop_internal.h"
 
 hgt_pop * hgt_pop_alloc(hgt_params *params, const gsl_rng * r) {
-    int i, j;
+    unsigned i, j;
 
     hgt_pop * p = (hgt_pop *) malloc (sizeof(hgt_pop));
     
@@ -27,18 +27,19 @@ hgt_pop * hgt_pop_alloc(hgt_params *params, const gsl_rng * r) {
     p->target_size = params->size;
     p->seq_len = params->seq_len;
     p->generation = 0;
+	p->total_time = 0;
     p->linkage_size = params->linkage_size;
     
 	// create linkages for tracking.
     p->linkages = (hgt_linkage **) malloc(p->size * sizeof(hgt_linkage*));
     for (j = 0; j < p->size; ++j) {
-        p->linkages[j] = hgt_linkage_new(NULL, p->generation);
+        p->linkages[j] = hgt_linkage_new(NULL, p->total_time);
     }
     p->locus_linkages = (hgt_linkage ***) malloc(p->linkage_size * sizeof(hgt_linkage**));
     for (i = 0; i < p->linkage_size; i++) {
         p->locus_linkages[i] = (hgt_linkage**) malloc(p->size * sizeof(hgt_linkage*));
         for (j = 0; j < p->size; j++) {
-            p->locus_linkages[i][j] = hgt_linkage_new(NULL, p->generation);
+            p->locus_linkages[i][j] = hgt_linkage_new(NULL, p->total_time);
         }
     }
     
@@ -93,11 +94,11 @@ hgt_pop * hgt_pop_alloc(hgt_params *params, const gsl_rng * r) {
 }
 
 hgt_pop * hgt_pop_copy(hgt_pop * p) {
-    int i;
     hgt_pop * new_p = (hgt_pop *) calloc(1, sizeof(hgt_pop));
     new_p->size = p->size;
     new_p->seq_len = p->seq_len;
     new_p->genomes = (hgt_genome **) malloc(p->size * sizeof(hgt_genome *));
+	unsigned i;
     for (i = 0; i < p->size; i++) {
         unsigned int seq_len = p->genomes[i]->seq_len;
         unsigned int fitness_size = p->genomes[i]->fitness_size;
@@ -112,7 +113,7 @@ hgt_pop * hgt_pop_copy(hgt_pop * p) {
 }
 
 int hgt_pop_free(hgt_pop * p) {
-    int i, j;
+    unsigned i, j;
     for (i = 0; i < p->size; i ++) {
         hgt_genome_free(p->genomes[i]);
         hgt_linkage_free(p->linkages[i]);
@@ -148,7 +149,7 @@ char *hgt_pop_to_json(hgt_pop *p, hgt_params *params){
     bformata(b, "\"FragLen\": %ld,\n", params->frag_len);
     bformata(b, "\"Generation\": %ld,\n", params->generations);
     bformata(b, "\"Genomes\": [\n");
-    int j;
+    unsigned j;
     for (j = 0; j < p->size; j ++) {
         if (j < p->size - 1) {
             bformata(b, "\"%s\",\n", p->genomes[j]);
@@ -262,7 +263,7 @@ int hgt_pop_transfer_linkages(hgt_pop *p,
                         unsigned int start)
 {
 
-    int i, track_linkage;
+    unsigned int i, track_linkage;
     unsigned int s = p->seq_len/2;
     for (i = 0; i < p->linkage_size; i++) {
         track_linkage = 0;
@@ -271,29 +272,34 @@ int hgt_pop_transfer_linkages(hgt_pop *p,
         }
 
         if (track_linkage == 1) {
-            linkage_transfer(p->locus_linkages[i], donor, receiver, p->generation);
+            linkage_transfer(p->locus_linkages[i], donor, receiver, p->total_time);
         }
     }
 
     return EXIT_SUCCESS;
 }
 
-int linkage_transfer(hgt_linkage ** linkages, int donor, int receiver, unsigned long generation) {
+int linkage_transfer(hgt_linkage ** linkages, int donor, int receiver, double birth_time) {
     hgt_linkage * parent;
     if (donor != receiver) {
         parent = linkages[donor]->parent;
-        generation = linkages[donor]->birthTime;
+		birth_time = linkages[donor]->birthTime;
         hgt_linkage_free(linkages[receiver]);
-        linkages[receiver] = hgt_linkage_new(parent, generation);
+        linkages[receiver] = hgt_linkage_new(parent, birth_time);
     }
     return EXIT_SUCCESS;
 }
 
-int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
+void increase_population_time(hgt_pop *p, double time) {
+	p->generation++;
+	p->total_time += time;
+}
+
+double hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
+	double time = hgt_pop_coal_time_moran(p->size, r);
+	increase_population_time(p, time);
     unsigned int b, d;
     double * fitness;
-    // increase population generation by 1.
-    p->generation++;
     // randomly choose a going-death cell.
     d = (unsigned int) gsl_rng_uniform_int(r, p->size);
     // randomly choose a going-birth one according to the fitness.
@@ -307,24 +313,27 @@ int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
         hgt_genome_copy(p->genomes[d], p->genomes[b]);
     }
 
-    linkage_birth_dead(p->linkages, b, d, p->generation);
-    int i;
+    linkage_birth_dead(p->linkages, b, d, p->total_time);
+    unsigned i;
     for (i = 0; i < p->linkage_size; i++) {
         hgt_linkage ** linkages;
         linkages = p->locus_linkages[i];
-        linkage_birth_dead(linkages, b, d, p->generation);
+        linkage_birth_dead(linkages, b, d, p->total_time);
     }
 
     free(fitness);
-    return EXIT_SUCCESS;
+    return time;
 }
 
-int hgt_pop_sample_linear_selection(hgt_pop *p, const gsl_rng *r) {
+double hgt_pop_sample_linear_selection(hgt_pop *p, const gsl_rng *r) {
     hgt_genome ** current_genomes, ** new_genomes;
     double * normalized_fitness;
     unsigned int current_size;
     
-    p->generation++;
+	// increase population generation and total time;
+	double time = hgt_pop_coal_time_linear_selection(p->size, r);
+	increase_population_time(p, time);
+
     current_genomes = p->genomes;
     current_size = p->size;
     
@@ -343,7 +352,7 @@ int hgt_pop_sample_linear_selection(hgt_pop *p, const gsl_rng *r) {
     }
     
     new_genomes = (hgt_genome **) malloc(new_size * sizeof(hgt_genome*));
-    int j, k;
+    unsigned j, k;
     hgt_genome * g;
     k = 0;
     for (i = 0; i < current_size; i++) {
@@ -371,16 +380,16 @@ int hgt_pop_sample_linear_selection(hgt_pop *p, const gsl_rng *r) {
     free(current_genomes);
     free(normalized_fitness);
     free(offsprings);
-    return EXIT_SUCCESS;
+    return time;
 }
 
-int linkage_birth_dead(hgt_linkage **linkages, int birth, int dead, unsigned long generation) {
+int linkage_birth_dead(hgt_linkage **linkages, int birth, int dead, double birth_time) {
     hgt_linkage * parent;
     parent = linkages[birth];
-    linkages[birth] = hgt_linkage_new(parent, generation);
+    linkages[birth] = hgt_linkage_new(parent, birth_time);
     if (birth != dead) {
         hgt_linkage_free(linkages[dead]);
-        linkages[dead] = hgt_linkage_new(parent, generation);
+        linkages[dead] = hgt_linkage_new(parent, birth_time);
     }
     return EXIT_SUCCESS;
 }
@@ -388,14 +397,14 @@ int linkage_birth_dead(hgt_linkage **linkages, int birth, int dead, unsigned lon
 int update_linkages_wf(hgt_pop *p, unsigned int *offsprings) {
     unsigned int current_size = 0, new_size = 0;
     current_size = p->size;
-    int i = 0;
+    unsigned i = 0;
     for (i = 0; i < current_size; i++) {
         new_size+=offsprings[i];
     }
     
     hgt_linkage ** current_linkages = p->linkages;
     hgt_linkage ** new_linkages = (hgt_linkage **) malloc(new_size * sizeof(hgt_linkage*));
-    linkage_linear_selection(current_linkages, offsprings, current_size, new_linkages, p->generation);
+    linkage_linear_selection(current_linkages, offsprings, current_size, new_linkages, p->total_time);
     hgt_linkage_free_more(current_linkages,current_size);
     p->linkages = new_linkages;
     free(current_linkages);
@@ -403,7 +412,7 @@ int update_linkages_wf(hgt_pop *p, unsigned int *offsprings) {
     for (i = 0; i < p->linkage_size; i++) {
         current_linkages = p->locus_linkages[i];
         new_linkages = (hgt_linkage**) malloc(new_size * sizeof(hgt_linkage*));
-        linkage_linear_selection(current_linkages, offsprings, current_size, new_linkages, p->generation);
+        linkage_linear_selection(current_linkages, offsprings, current_size, new_linkages, p->total_time);
         p->locus_linkages[i] = new_linkages;
         hgt_linkage_free_more(current_linkages, current_size);
         free(current_linkages);
@@ -412,18 +421,18 @@ int update_linkages_wf(hgt_pop *p, unsigned int *offsprings) {
     return EXIT_SUCCESS;
 }
 
-int linkage_linear_selection(hgt_linkage ** current_linkages, unsigned int * offsprings, unsigned int current_size, hgt_linkage ** new_linkages, unsigned long generation){
-    int i, num_offspring;
+int linkage_linear_selection(hgt_linkage ** current_linkages, unsigned int * offsprings, unsigned int current_size, hgt_linkage ** new_linkages, double birth_time){
+    unsigned i, num_offspring;
     
     hgt_linkage *l, *parent;
-    int j, k;
+    unsigned j, k;
     k = 0;
     for (i = 0; i < current_size; i++) {
         parent = current_linkages[i];
         num_offspring = offsprings[i];
         if (num_offspring > 0) {
             for (j = 0; j < num_offspring; j++) {
-                l = hgt_linkage_new(parent, generation);
+                l = hgt_linkage_new(parent, birth_time);
                 new_linkages[k] = l;
                 k++;
             }
@@ -438,10 +447,12 @@ int linkage_linear_selection(hgt_linkage ** current_linkages, unsigned int * off
     return EXIT_SUCCESS;
 }
 
-int hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r) {
-    p->generation++;
+double hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r) {
+	// increase population generation and total time.
+	double time = hgt_pop_coal_time_wf(p->size, r);
+	increase_population_time(p, time);
 
-    int i, j, k;
+    unsigned i, j, k;
     
     unsigned int *offsprings = (unsigned int*) calloc(p->size, sizeof(unsigned int));
     for (i = 0; i < p->size; i++) {
@@ -457,7 +468,7 @@ int hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r) {
     hgt_genome **current_genomes = p->genomes;
     hgt_genome *g;
     k = 0;
-    int num_offspring;
+    unsigned num_offspring;
     for (i = 0; i < p->size; i++) {
         num_offspring = offsprings[i];
         if (num_offspring > 0) {
@@ -481,27 +492,26 @@ int hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r) {
     free(offsprings);
     free(current_genomes);
 
-    return EXIT_SUCCESS;
+    return time;
 
 }
 
-double hgt_pop_frag_constant(hgt_params *params, const gsl_rng *r) {
-    return (double) params->frag_len;
+unsigned hgt_pop_frag_constant(hgt_params *params, const gsl_rng *r) {
+    return params->frag_len;
 }
 
-double hgt_pop_frag_exp(hgt_params *params, const gsl_rng *r) {
-    return gsl_ran_exponential(r, (double) params->frag_len);
+unsigned hgt_pop_frag_exp(hgt_params *params, const gsl_rng *r) {
+    return (unsigned) gsl_ran_exponential(r, (double) params->frag_len);
 }
 
-int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f, hgt_pop_coal_time_func c_time_f, hgt_pop_frag_func frag_f, const gsl_rng *r) {
-    sample_f(p, r);
-    
+int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f, hgt_pop_frag_func frag_f, const gsl_rng *r) {
+    double time = sample_f(p, r);
     // mutate fitness.
     double fitness_mutation_rate = params->fitness_mutation_rate * (double) p->size;
     if (fitness_mutation_rate > 0) {
 		double mu;
 		int count;
-        mu = c_time_f(p->size, r) * fitness_mutation_rate;
+        mu = time * fitness_mutation_rate;
         count = gsl_ran_poisson(r, mu);
 		int k;
         for (k = 0; k < count; k++) {
@@ -509,29 +519,38 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
         }
     }
 
-    // neutral sites mutation and transfer.
-    int weight_size = 2;
-    double weights[2];
-    weights[0] = params->mu_rate * (double) (p->seq_len * p->size);
-    weights[1] = params->tr_rate * (double) (p->seq_len * p->size);
-    double total = 0;
-    int i;
-    for (i = 0; i < weight_size; i ++) {
-        total += weights[i];
-    }
-    double time = 1.0 / (double)p->size;
-    double mu = time * total;
-    int count = gsl_ran_poisson(r, mu);
-    int k;
-    for (k = 0; k < count; k ++) {
-        i = hgt_utils_Roulette_Wheel_select(weights, weight_size, r);
-        if (i == 0) {
-            hgt_pop_mutate(p, params, r);
-        } else {
-            int frag_len = frag_f(params, r);
-            hgt_pop_transfer(p, params, frag_len, r);
-        }
-    }
+	unsigned g;
+	for (g = 0; g < p->size; g++) {
+		int weight_size = 2;
+		double weights[2];
+		weights[0] = params->mu_rate * (double)p->seq_len;
+		weights[1] = params->tr_rate * (double)p->seq_len;
+		double total = weights[0] + weights[1];
+		double mu = total * time;
+		int count = gsl_ran_poisson(r, mu);
+		int k;
+		for (k = 0; k < count; k++) {
+			int choice = hgt_utils_Roulette_Wheel_select(weights, weight_size, r);
+			int pos = gsl_rng_uniform_int(r, p->seq_len);
+			if (choice == 0) {
+				hgt_genome_mutate(p->genomes[g], pos, r);
+			}
+			else {
+				int d = gsl_rng_uniform_int(r, p->size);
+				hgt_genome *receiver = p->genomes[g];
+				hgt_genome *donor = p->genomes[d];
+				int frag_len = frag_f(params, r);
+				hgt_genome_transfer(receiver, donor, pos, frag_len);
+				hgt_pop_transfer_linkages(p, d, g, frag_len, pos);
+			}
+		}
+
+	}
+
+	if (p->generation % 10 == 0)
+	{
+		hgt_pop_prune_linkages(p);
+	}
     
     return EXIT_SUCCESS;
 }
@@ -553,7 +572,7 @@ double hgt_pop_coal_time_linear_selection(unsigned long p_size, const gsl_rng *r
 
 double hgt_pop_calc_ks(hgt_pop *p) {
     double ks;
-    int i, j, k;
+    unsigned i, j, k;
     ks = 0;
     
     for (i = 0; i < p->size; i++) {
@@ -572,7 +591,7 @@ double hgt_pop_calc_ks(hgt_pop *p) {
 }
 
 int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample_size, hgt_cov_sample_func sample_func, const gsl_rng *r) {
-    int i, j;
+    unsigned i, j;
     unsigned long a, b, c, d;
     for (i = 0; i < p->seq_len; i++) {
         ds1[i] = 0;
@@ -600,7 +619,7 @@ int hgt_pop_calc_dist(hgt_pop *p, double *ds1, double *ds2, unsigned long sample
 }
 
 int hgt_pop_calc_pxy(double *pxy, unsigned int maxl, double *ds1, double *ds2, unsigned int len, int circular) {
-    int i, l;
+    unsigned i, l;
     for (l = 0; l < maxl; l++) {
         for (i = 0; i < 4; i++) {
             pxy[l*4+i] = 0;
@@ -647,7 +666,7 @@ int hgt_pop_calc_pxy(double *pxy, unsigned int maxl, double *ds1, double *ds2, u
 int hgt_pop_calc_pxy_fft(double *pxy, unsigned int maxl, double *d1, double *d2, unsigned int len, int circular) {
 
     unsigned long fft_len;
-    int i, j, l;
+    unsigned i, j, l;
     fft_len = next_power2(len);
 	double **ds1, **ds2;
 	ds1 = (double **)malloc(2 *sizeof(double*));
@@ -747,7 +766,7 @@ int hgt_pop_calc_cov_all(hgt_cov_result *result, hgt_pop *p) {
     unsigned long matrix_size = p->size * (p->size - 1) / 2;
     short  **matrix = malloc( matrix_size * sizeof(short*));
     
-    int i, j, k, h;
+    unsigned i, j, k, h;
     
     k = 0;
     for (i = 0; i < p->size; i++) {
@@ -775,29 +794,30 @@ int hgt_pop_calc_cov_all(hgt_cov_result *result, hgt_pop *p) {
     return EXIT_SUCCESS;
 }
 
-int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, int sample, const gsl_rng* rng) {
+int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, unsigned sample, const gsl_rng* rng) {
     // allocate a binary matrix
     short **matrix = malloc(sample*sizeof(short*));
-    int i, j;
-    unsigned long a, b;
+    unsigned i, j;
     
     for (i = 0; i < sample; i++) {
         // randomly choose two distinct genomes for comparison.
-        a = gsl_rng_uniform_int(rng, p->size);
-        b = gsl_rng_uniform_int(rng, p->size);
-        while (a == b) {
-            b = gsl_rng_uniform_int(rng, p->size);
-        }
-        
-        // do comparison to binary sequence.
-        matrix[i] = malloc(p->seq_len*sizeof(short));
-        for (j = 0; j < p->seq_len; j++) {
-            if (p->genomes[a]->seq[j] != p->genomes[b]->seq[j]) {
-                matrix[i][j] = 1;
-            } else {
-                matrix[i][j] = 0;
-            }
-        }
+		hgt_genome **selected_genomes = (hgt_genome **)malloc(2 * sizeof(hgt_genome *));
+		gsl_ran_choose(rng, selected_genomes, 2, p->genomes, p->size, sizeof(hgt_genome));
+		unsigned seq_len = hgt_genome_get_seq_size(selected_genomes[0]);
+		for ( j = 0; j < seq_len; j++)
+		{
+			char *seq_a, *seq_b;
+			seq_a = hgt_genome_get_seq(selected_genomes[0]);
+			seq_b = hgt_genome_get_seq(selected_genomes[1]);
+			if (seq_a[j] != seq_b[j])
+			{
+				matrix[i][j] = 1;
+			}
+			else {
+				matrix[i][j] = 0;
+			}
+		}
+		free(selected_genomes);
     }
     hgt_cov_result_calc_matrix(result, matrix, sample, p->seq_len);
     
@@ -811,7 +831,7 @@ int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, int sample, const gsl_r
 
 double hgt_pop_mean_fitness(hgt_pop *p) {
     double f;
-    int i;
+    unsigned i;
     f = 0;
     for (i = 0; i < p->size; ++i){
         f += hgt_genome_get_fitness(p->genomes[i]);
@@ -824,21 +844,21 @@ double hgt_pop_mean_fitness(hgt_pop *p) {
 
 int hgt_pop_prune_linkages(hgt_pop *p) {
     hgt_linkage_prune_more(p->linkages, p->size);
-    int i;
+    unsigned i;
     for (i = 0; i < p->linkage_size; i++) {
         hgt_linkage_prune_more(p->locus_linkages[i], p->size);
     }
     return EXIT_SUCCESS;
 }
 
-int hgt_pop_calc_coal_time(hgt_linkage ** pop_linkages, int size, 
+int hgt_pop_calc_coal_time(hgt_linkage ** pop_linkages, unsigned size, 
     unsigned int sample_size,
-    unsigned long *res, 
-    int linkage_size, 
+    double *res, 
+    unsigned linkage_size, 
     hgt_linkage_find_time_func find_func,
     const gsl_rng *r) {
 
-    int i, j;
+    unsigned i, j;
 	int *a, *b;
 	a = (int *)malloc(linkage_size * sizeof(int));
 	b = (int *)malloc(size * sizeof(int));
@@ -862,11 +882,11 @@ int hgt_pop_calc_coal_time(hgt_linkage ** pop_linkages, int size,
     return EXIT_SUCCESS;
 }
 
-int hgt_pop_calc_most_recent_coal_time(hgt_linkage ** pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r) {
+double hgt_pop_calc_most_recent_coal_time(hgt_linkage ** pop_linkages, unsigned size, unsigned long sample_size, double * res, unsigned linkage_size, const gsl_rng *r) {
     return hgt_pop_calc_coal_time(pop_linkages, size, sample_size, res, linkage_size, hgt_linkage_find_most_rescent_coalescence_time, r);
 }
 
-int hgt_pop_calc_most_recent_ancestor_time(hgt_linkage ** pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r) {
+double hgt_pop_calc_most_recent_ancestor_time(hgt_linkage ** pop_linkages, unsigned size, unsigned long sample_size, double * res, unsigned linkage_size, const gsl_rng *r) {
     return hgt_pop_calc_coal_time(pop_linkages, size, sample_size, res, linkage_size, hgt_linkage_find_most_rescent_ancestor_time, r);
 }
 
@@ -875,7 +895,7 @@ int hgt_pop_calc_fitness(hgt_pop *p, double * fitness) {
     size_ratio = (double) p->size / (double) p->target_size;
     mean_fitness = hgt_pop_mean_fitness(p);
     cpot = mean_fitness - (1.0 - size_ratio);
-    int i;
+    unsigned i;
     for (i = 0; i < p->size; i++) {
         f = hgt_genome_get_fitness(p->genomes[i]);
         fitness[i] = exp(f - cpot);
@@ -895,8 +915,8 @@ unsigned long next_power2(unsigned int len) {
     return v;
 }
 
-unsigned int search_region(unsigned int pos, unsigned int** region, int num_regions, int inside) {
-    int i;
+unsigned int search_region(unsigned int pos, unsigned int** region, unsigned num_regions, int inside) {
+    unsigned i;
     unsigned long c = pos;
     for (i = 0; i < num_regions; i++) {
         if (inside == 0) {

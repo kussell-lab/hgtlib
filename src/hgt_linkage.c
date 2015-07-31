@@ -3,6 +3,7 @@
 //
 #include "hgt_linkage.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 hgt_linkage * free_linkage_and_return_parent(hgt_linkage *l);
 
@@ -13,7 +14,7 @@ hgt_linkage * hgt_linkage_alloc() {
     return l;
 }
 
-hgt_linkage * hgt_linkage_new(hgt_linkage * parent, unsigned long birthTime) {
+hgt_linkage * hgt_linkage_new(hgt_linkage * parent, double birthTime) {
     hgt_linkage *l = hgt_linkage_alloc();
     l->birthTime = birthTime;
     l->parent = parent;
@@ -31,14 +32,14 @@ int hgt_linkage_free(hgt_linkage *l) {
 }
 
 int hgt_linkage_free_more(hgt_linkage **l, unsigned int size) {
-    int i;
+    unsigned int i;
     for (i = 0; i < size; i++) {
         hgt_linkage_free(l[i]);
     }
     return  EXIT_SUCCESS;
 }
 
-unsigned long hgt_linkage_find_most_rescent_ancestor_time(hgt_linkage ** linkages, int size) {
+double hgt_linkage_find_most_rescent_ancestor_time(hgt_linkage ** linkages, int size) {
     int bad = 0, found = 1;
     hgt_linkage * parent = linkages[0]->parent;
     int i;
@@ -53,16 +54,26 @@ unsigned long hgt_linkage_find_most_rescent_ancestor_time(hgt_linkage ** linkage
         }
     }
 
-    unsigned long maxBirthTime, birthTime;
+    double maxBirthTime, birthTime;
     unsigned int maxIndex;
     if (bad == 1) {
         return 0;
     } else {
         if (found == 1) {
             birthTime = linkages[0]->birthTime;
+			// check birth time to see all have the same birth time.
+			int i;
+			for (i = 0; i < size; i++)
+			{
+				if (linkages[i]->birthTime != birthTime) {
+					printf("hgt_linkage_find_most_recent_ancestor_time: different birth times!\n");
+					exit(EXIT_FAILURE);
+				}
+			}
             return birthTime;
         } else {
-            // find the one that has max birth time.
+            // find the one that has max birth time, which is the most recent born one,
+			// and trace back to its parent.
             maxBirthTime = linkages[0]->birthTime;
             maxIndex = 0;
             for (i = 0; i < size; i++) {
@@ -79,10 +90,10 @@ unsigned long hgt_linkage_find_most_rescent_ancestor_time(hgt_linkage ** linkage
 
 }
 
-unsigned long hgt_linkage_find_most_rescent_coalescence_time(hgt_linkage ** linkages, int size) {
+double hgt_linkage_find_most_rescent_coalescence_time(hgt_linkage ** linkages, int size) {
     int i, j;
     int bad, maxIndex;
-    unsigned long birthTime, maxBirthTime;
+    double birthTime, maxBirthTime;
 
     bad = 0;
     for (i = 0; i < size; ++i) {
@@ -128,6 +139,12 @@ int hgt_linkage_prune(hgt_linkage *l) {
     hgt_linkage *parent;
     parent = l->parent;
     while (parent && parent->numChildren <= 1) {
+		// we need the parent to know the ancestral birth time.
+		hgt_linkage *grandparent = parent->parent;
+		if (!grandparent || grandparent->numChildren > 1)
+		{
+			break;
+		}
         l->parent = parent->parent;
         free(parent);
         parent = l->parent;
@@ -136,7 +153,7 @@ int hgt_linkage_prune(hgt_linkage *l) {
 }
 
 int hgt_linkage_prune_more(hgt_linkage **l, unsigned int size) {
-    int i;
+    unsigned int i;
     for (i = 0; i < size; i++) {
         hgt_linkage_prune(l[i]);
     }

@@ -29,6 +29,7 @@ struct _hgt_pop {
     unsigned int size;     // population size
     unsigned int seq_len;  // genome length
     unsigned int generation;
+	double total_time;
     hgt_genome ** genomes;        // genome sequences
     hgt_linkage ** linkages; // linkages.
     hgt_linkage *** locus_linkages; // locus linkages.
@@ -39,8 +40,8 @@ struct _hgt_pop {
     unsigned int * survived;
     unsigned int * new_born;
     int cache_allocated;
-    int linkage_size;
-    int target_size; // target population size.
+    unsigned int linkage_size;
+    unsigned int target_size; // target population size.
 };
 
 int hgt_pop_prune_linkages(hgt_pop *p);
@@ -48,15 +49,15 @@ int hgt_pop_calc_fitness(hgt_pop *p, double * fitness);
 
 int hgt_pop_calc_coal_time(
     hgt_linkage **pop_linkages,
-    int size, 
+    unsigned size, 
     unsigned int sample_size,
-    unsigned long *res,
-    int linkage_size, 
+    double *res,
+    unsigned linkage_size, 
     hgt_linkage_find_time_func find_func,
     const gsl_rng *r);
-typedef int (*hgt_pop_calc_most_recent_coal_func) (hgt_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
-int hgt_pop_calc_most_recent_coal_time(hgt_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
-int hgt_pop_calc_most_recent_ancestor_time(hgt_linkage **pop_linkages, int size, unsigned long sample_size, unsigned long * res, int linkage_size, const gsl_rng *r);
+typedef double (*hgt_pop_calc_most_recent_coal_func) (hgt_linkage **pop_linkages, unsigned size, unsigned long sample_size, double * res, unsigned linkage_size, const gsl_rng *r);
+double hgt_pop_calc_most_recent_coal_time(hgt_linkage **pop_linkages, unsigned size, unsigned long sample_size, double * res, unsigned linkage_size, const gsl_rng *r);
+double hgt_pop_calc_most_recent_ancestor_time(hgt_linkage **pop_linkages, unsigned size, unsigned long sample_size, double * res, unsigned linkage_size, const gsl_rng *r);
 
 hgt_pop * hgt_pop_alloc(hgt_params *params, const gsl_rng * r);
 hgt_pop * hgt_pop_copy(hgt_pop * p);
@@ -65,30 +66,29 @@ char *hgt_pop_to_json(hgt_pop *p, hgt_params *params);
 
 double hgt_pop_mean_fitness(hgt_pop *p);
 
-typedef int (*hgt_pop_sample_func)(hgt_pop *p, const gsl_rng *r);
-int hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r);
-int hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r);
-int hgt_pop_sample_linear_selection(hgt_pop *p, const gsl_rng *r);
+typedef double (*hgt_pop_sample_func)(hgt_pop *p, const gsl_rng *r);
+double hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r);
+double hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r);
+double hgt_pop_sample_linear_selection(hgt_pop *p, const gsl_rng *r);
 
 typedef double (*hgt_pop_coal_time_func)(unsigned long p_size, const gsl_rng *r);
 double hgt_pop_coal_time_moran(unsigned long p_size, const gsl_rng *r);
 double hgt_pop_coal_time_wf(unsigned long p_size, const gsl_rng *r);
 double hgt_pop_coal_time_linear_selection(unsigned long p_size, const gsl_rng *r);
 
-typedef double (*hgt_pop_frag_func)(hgt_params *params, const gsl_rng *r);
-double hgt_pop_frag_constant(hgt_params *params, const gsl_rng *r);
-double hgt_pop_frag_exp(hgt_params *params, const gsl_rng *r);
+typedef unsigned (*hgt_pop_frag_func)(hgt_params *params, const gsl_rng *r);
+unsigned hgt_pop_frag_constant(hgt_params *params, const gsl_rng *r);
+unsigned hgt_pop_frag_exp(hgt_params *params, const gsl_rng *r);
 
 int hgt_pop_evolve(hgt_pop *p, 
                    hgt_params *params, 
-                   hgt_pop_sample_func sample_f, 
-                   hgt_pop_coal_time_func c_time_f, 
+                   hgt_pop_sample_func sample_f,
                    hgt_pop_frag_func frag_f, 
                    const gsl_rng *r);
 
 double hgt_pop_calc_ks(hgt_pop *p);
 
-int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, int sample, const gsl_rng* rng);
+int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, unsigned sample, const gsl_rng* rng);
 int hgt_pop_calc_cov_all(hgt_cov_result *result, hgt_pop *p);
 int hgt_pop_calc_t2(hgt_pop *p, unsigned long sample_size, unsigned long * res, const gsl_rng *rng);
 
