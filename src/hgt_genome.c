@@ -14,7 +14,7 @@ static int NUM_DNA_CHAR = 4;
 
 int transfer_mutate(hgt_genome *receiver, hgt_genome *donor, int start, int end);
 int hgt_genome_mutate_(hgt_genome *g, unsigned pos, unsigned char_max, const gsl_rng *r);
-
+char random_char(const gsl_rng *r);
 void hgt_genome_set_alphabet_size(unsigned size) {
 	NUM_DNA_CHAR = size;
 }
@@ -63,10 +63,10 @@ int hgt_genome_mutate(hgt_genome *g, unsigned int pos, const gsl_rng *r) {
 }
 
 int hgt_genome_mutate_(hgt_genome *g, unsigned int pos, unsigned char_max, const gsl_rng *r) {
-	char random_c = (char) gsl_rng_uniform_int(r, char_max);
+	char random_c = random_char(r);
 	while (random_c == g->seq[pos] )
 	{
-		random_c = (char)gsl_rng_uniform_int(r, char_max);
+		random_c = random_char(r);
 	}
 	g->seq[pos] = random_c;
 	return EXIT_SUCCESS;
@@ -142,8 +142,12 @@ char * hgt_genome_random_sequence(int length, const gsl_rng *r) {
     char * seq = (char *) malloc((length+1) * sizeof(char));
     int i;
     for (i = 0; i < length; i++) {
-		seq[i] = (char)gsl_rng_uniform_int(r, NUM_DNA_CHAR);
+		seq[i] = random_char(r);
     }
     seq[length] = '\0';
     return seq;
+}
+
+char random_char(const gsl_rng *r) {
+	return (char)(gsl_rng_uniform_int(r, NUM_DNA_CHAR) + 1);
 }
