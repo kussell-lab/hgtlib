@@ -205,7 +205,7 @@ int sample(hgt_pop** ps, hgt_params* params, int linkage_size,
 int coal_evolve(hgt_params* params, int size, int length, double time,
     hgt_stat_meanvar_list *list, const gsl_rng* r)
 {
-    double mutation_rate = params->mu_rate;
+    double mutation_rate = params->mu_rate * 2;
     hgt_genome** genomes = create_genomes(size, length, r);
     mutate_genomes(genomes, size, mutation_rate, time, r);
     calc_pxy(genomes, size, params->maxl, list);
