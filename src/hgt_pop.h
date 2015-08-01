@@ -63,6 +63,7 @@ hgt_pop * hgt_pop_alloc(hgt_params *params, const gsl_rng * r);
 hgt_pop * hgt_pop_copy(hgt_pop * p);
 int hgt_pop_free(hgt_pop * r);
 char *hgt_pop_to_json(hgt_pop *p, hgt_params *params);
+double hgt_pop_get_time(hgt_pop *p);
 
 double hgt_pop_mean_fitness(hgt_pop *p);
 

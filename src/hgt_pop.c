@@ -295,9 +295,16 @@ void increase_population_time(hgt_pop *p, double time) {
 	p->total_time += time;
 }
 
+double hgt_pop_get_time(hgt_pop *p) {
+	return p->total_time;
+}
+
 double hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
-	double time = hgt_pop_coal_time_moran(p->size, r);
-	increase_population_time(p, time);
+	// obtain current generation.
+	double current_time;
+	current_time = hgt_pop_get_time(p);
+	
+	// reproduction.
     unsigned int b, d;
     double * fitness;
     // randomly choose a going-death cell.
@@ -313,15 +320,20 @@ double hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
         hgt_genome_copy(p->genomes[d], p->genomes[b]);
     }
 
-    linkage_birth_dead(p->linkages, b, d, p->total_time);
+	// update linkages.
+    linkage_birth_dead(p->linkages, b, d, current_time);
     unsigned i;
     for (i = 0; i < p->linkage_size; i++) {
         hgt_linkage ** linkages;
         linkages = p->locus_linkages[i];
-        linkage_birth_dead(linkages, b, d, p->total_time);
+        linkage_birth_dead(linkages, b, d, current_time);
     }
 
     free(fitness);
+
+	double time;
+	time = hgt_pop_coal_time_moran(p->size, r);
+	increase_population_time(p, time);
     return time;
 }
 
@@ -329,10 +341,6 @@ double hgt_pop_sample_linear_selection(hgt_pop *p, const gsl_rng *r) {
     hgt_genome ** current_genomes, ** new_genomes;
     double * normalized_fitness;
     unsigned int current_size;
-    
-	// increase population generation and total time;
-	double time = hgt_pop_coal_time_linear_selection(p->size, r);
-	increase_population_time(p, time);
 
     current_genomes = p->genomes;
     current_size = p->size;
@@ -380,6 +388,12 @@ double hgt_pop_sample_linear_selection(hgt_pop *p, const gsl_rng *r) {
     free(current_genomes);
     free(normalized_fitness);
     free(offsprings);
+
+	// increase population generation and total time;
+	double time; 
+	time = hgt_pop_coal_time_linear_selection(p->size, r);
+	increase_population_time(p, time);
+
     return time;
 }
 
@@ -448,10 +462,6 @@ int linkage_linear_selection(hgt_linkage ** current_linkages, unsigned int * off
 }
 
 double hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r) {
-	// increase population generation and total time.
-	double time = hgt_pop_coal_time_wf(p->size, r);
-	increase_population_time(p, time);
-
     unsigned i, j, k;
     
     unsigned int *offsprings = (unsigned int*) calloc(p->size, sizeof(unsigned int));
@@ -491,6 +501,10 @@ double hgt_pop_sample_wf(hgt_pop *p, const gsl_rng *r) {
     p->genomes = new_genomes;
     free(offsprings);
     free(current_genomes);
+
+	// increase population generation and total time.
+	double time = hgt_pop_coal_time_wf(p->size, r);
+	increase_population_time(p, time);
 
     return time;
 
