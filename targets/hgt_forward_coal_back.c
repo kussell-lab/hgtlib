@@ -97,6 +97,7 @@ file_container* create_file_container(char* prefix)
 	fc->forw_p2 = create_file(prefix, "forw_p2");
     fc->t2 = create_file(prefix, "t2");
     fc->t2_spl = create_file(prefix, "t2_sample");
+	fc->fitness = create_file(prefix, "fitness");
     return fc;
 }
 
@@ -124,6 +125,8 @@ int close_file_container(file_container* fc)
     fclose(fc->coal_p2);
 	fclose(fc->forw_p2);
     fclose(fc->t2);
+	fclose(fc->t2_spl);
+	fclose(fc->fitness);
     return EXIT_SUCCESS;
 }
 
@@ -133,6 +136,7 @@ int flush_file_container(file_container* fc)
     fflush(fc->t2_spl);
     fflush(fc->coal_p2);
 	fflush(fc->forw_p2);
+	fflush(fc->fitness);
     return EXIT_SUCCESS;
 }
 
@@ -194,6 +198,8 @@ int sample(hgt_pop** ps, hgt_params* params, int linkage_size,
 		
 		free(indices);
 		free(choose);
+
+		write_fitness(p);
     }
 
 	free(linkages);
@@ -292,9 +298,18 @@ int write_t2(FILE* f, hgt_stat_meanvar *mv, unsigned long gen)
     return EXIT_SUCCESS;
 }
 
+void write_fitness(FILE *f, hgt_pop *p) {
+	unsigned i;
+	unsigned long gen = p->generation;
+	for (i = 0; i < p->size; i++) {
+		hgt_genome *g = p->genomes[i];
+		double fitness = hgt_genome_get_fitness(g);
+		fprintf(f, "%g\t%lu\n", fitness, gen);
+	}
+}
+
 hgt_genome** create_genomes(int size, int length, const gsl_rng* r)
 {
-    int random_seq(char* seq, int length, const gsl_rng* r);
     char* ancestor = hgt_genome_random_sequence(length, r);
 
     hgt_genome** genomes = malloc(size * sizeof(hgt_genome*));
