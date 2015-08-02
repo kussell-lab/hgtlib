@@ -199,7 +199,7 @@ int sample(hgt_pop** ps, hgt_params* params, int linkage_size,
 		free(indices);
 		free(choose);
 
-		write_fitness(p);
+		write_fitness(files->fitness, p);
     }
 
 	free(linkages);
