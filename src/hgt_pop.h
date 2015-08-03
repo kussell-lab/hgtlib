@@ -16,33 +16,14 @@
 #include "hgt_linkage.h"
 #include "hgt_params.h"
 #include <gsl/gsl_rng.h>
+#include "hgt_pop_bsc.h"
+#include "hgt_pop_define.h"
 
 #define MORAN 0;
 #define WRIGHT_FISHER 1;
 #define LINEAR_SELECTION 2;
 #define CONSTANT_FRAG 0;
 #define EXP_FRAG 1;
-
-typedef struct _hgt_pop hgt_pop;
-
-struct _hgt_pop {
-    unsigned int size;     // population size
-    unsigned int seq_len;  // genome length
-    unsigned int generation;
-	double total_time;
-    hgt_genome ** genomes;        // genome sequences
-    hgt_linkage ** linkages; // linkages.
-    hgt_linkage *** locus_linkages; // locus linkages.
-    
-    int ** transfer_hotspots; // transfer hotspots
-    
-    // cache
-    unsigned int * survived;
-    unsigned int * new_born;
-    int cache_allocated;
-    unsigned int linkage_size;
-    unsigned int target_size; // target population size.
-};
 
 int hgt_pop_prune_linkages(hgt_pop *p);
 int hgt_pop_calc_fitness(hgt_pop *p, double * fitness);
@@ -101,4 +82,6 @@ int hgt_pop_calc_pxy_fft(double *pxy, unsigned int maxl, double *d1, double *d2,
 int hgt_pop_linkage_prune_p(hgt_pop *p);
 
 int hgt_pop_mutate(hgt_pop *p, hgt_params* params, const gsl_rng* r);
+
+
 #endif

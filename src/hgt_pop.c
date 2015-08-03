@@ -649,7 +649,7 @@ int hgt_pop_calc_pxy(double *pxy, unsigned int maxl, double *ds1, double *ds2, u
                 b = (i-l+len) % len;
                 num++;
             } else {
-                if (i-l < 0) {
+                if (i < l) {
                     continue;
                 }
                 a = i;

@@ -26,4 +26,5 @@ unsigned long next_power2(unsigned int len);
 // increase population total time for each generation.
 void increase_population_time(hgt_pop *p, double time);
 
+int random_num_offsprings_bsc(unsigned int n, const gsl_rng *r);
 #endif //HGT_HGT_POP_INTERNAL_H
