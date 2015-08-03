@@ -7,12 +7,21 @@
 //
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include "hgt_genome.h"
 
-const char DNA[5] = "ATGC\0";
-const int NUM_DNA_CHAR = 4;
+static int NUM_DNA_CHAR = 4;
 
 int transfer_mutate(hgt_genome *receiver, hgt_genome *donor, int start, int end);
+int hgt_genome_mutate_(hgt_genome *g, unsigned pos, unsigned char_max, const gsl_rng *r);
+char random_char(const gsl_rng *r);
+void hgt_genome_set_alphabet_size(unsigned size) {
+	NUM_DNA_CHAR = size;
+}
+
+int hgt_genome_get_alphabet_size() {
+	return NUM_DNA_CHAR;
+}
 
 hgt_genome * hgt_genome_alloc(unsigned int seq_len, unsigned int fitness_size) {
     hgt_genome *g = (hgt_genome *) malloc(sizeof(hgt_genome)) ;
@@ -50,14 +59,17 @@ hgt_genome * hgt_genome_new(char * seq, unsigned int seq_size, unsigned int fitn
 }
 
 int hgt_genome_mutate(hgt_genome *g, unsigned int pos, const gsl_rng *r) {
-    char c;
-    c = DNA[gsl_rng_uniform_int(r, NUM_DNA_CHAR)];
-    while ( c == g->seq[pos] ) {
-        c = DNA[gsl_rng_uniform_int(r, NUM_DNA_CHAR)];
-    }
-    g->seq[pos] = c;
-    
-    return EXIT_SUCCESS;
+    return hgt_genome_mutate_(g, pos, NUM_DNA_CHAR, r);
+}
+
+int hgt_genome_mutate_(hgt_genome *g, unsigned int pos, unsigned char_max, const gsl_rng *r) {
+	char random_c = random_char(r);
+	while (random_c == g->seq[pos] )
+	{
+		random_c = random_char(r);
+	}
+	g->seq[pos] = random_c;
+	return EXIT_SUCCESS;
 }
 
 int hgt_genome_fitness_mutate(hgt_genome *g, unsigned int pos, double delta) {
@@ -130,9 +142,12 @@ char * hgt_genome_random_sequence(int length, const gsl_rng *r) {
     char * seq = (char *) malloc((length+1) * sizeof(char));
     int i;
     for (i = 0; i < length; i++) {
-        int idx = (int) gsl_rng_uniform_int(r, NUM_DNA_CHAR);
-        seq[i] = DNA[idx];
+		seq[i] = random_char(r);
     }
     seq[length] = '\0';
     return seq;
+}
+
+char random_char(const gsl_rng *r) {
+	return (char)(gsl_rng_uniform_int(r, NUM_DNA_CHAR) + 1);
 }

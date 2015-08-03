@@ -6,6 +6,7 @@ struct _file_container {
 	FILE *forw_p2;
     FILE *t2;
     FILE *t2_spl;
+	FILE *fitness;
 };
 file_container * create_file_container(char * prefix);
 int destroy_file_container(file_container *fc);
@@ -21,11 +22,11 @@ int mutate_genomes(hgt_genome **genomes, int size, double mutation_rate, double 
 double *compare_genomes(hgt_genome *g1, hgt_genome *g2);
 int random_seq(char * seq, int seq_len, const gsl_rng * r);
 int sample(hgt_pop **ps, hgt_params *params,
-           int linkage_size,
-           hgt_pop_coal_time_func coal_time_f, file_container *files,
+           int linkage_size, file_container *files,
            const gsl_rng *r);
 int update_t2(hgt_stat_meanvar *mv, double t2);
 int write_t2(FILE *f, hgt_stat_meanvar *mv, unsigned long gen);
 int write_t2_all(FILE *f, double t2, unsigned int gen);
 int flush_file_container(file_container *fc);
+void write_fitness(FILE *f, hgt_pop *p);
 #endif

@@ -54,7 +54,6 @@ int main(int argc, char* argv[])
 
     // specify process functions.
     hgt_pop_sample_func sample_f = hgt_pop_sample_moran;
-    hgt_pop_coal_time_func coal_time_f = hgt_pop_coal_time_moran;
     hgt_pop_frag_func frag_f = hgt_pop_frag_constant;
     
     // prepare output files.
@@ -62,26 +61,25 @@ int main(int argc, char* argv[])
 
 	time_t start, end;
 	start = clock();
-	int g;
+	unsigned g;
 	for ( g = 0; g < params->generations; g++)
 	{
-		int i;
+		unsigned i;
 		for ( i = 0; i < params->replicates; i++)
 		{
-			hgt_pop_evolve(ps[i], params, sample_f, coal_time_f, frag_f, r);
+			hgt_pop_evolve(ps[i], params, sample_f, frag_f, r);
 		}
 	}
 	end = clock();
-	printf("running %u generations before sampling, using time = %ld sec\n", params->generations, (end - start) / CLOCKS_PER_SEC);
+	printf("running %u generations before sampling, using time = %lld sec\n", params->generations, (end - start) / CLOCKS_PER_SEC);
 
-    int i;
+    unsigned i;
     for (i = 0; i < params->sample_time; i++) {
 		start = clock();
-        hgt_utils_batch_evolve(ps, params->replicates, params, sample_f,
-            coal_time_f, frag_f, r);
-        sample(ps, params, 2, coal_time_f, fc, r);
+        hgt_utils_batch_evolve(ps, params->replicates, params, sample_f, frag_f, r);
+        sample(ps, params, 2, fc, r);
 		end = clock();
-		printf("running %u generations at sample %d, using time = %ld sec\n", params->sample_generations, i, (end - start) / CLOCKS_PER_SEC);
+		printf("running %u generations at sample %d, using time = %lld sec\n", params->sample_generations, i, (end - start) / CLOCKS_PER_SEC);
     }
 
     close_file_container(fc);
@@ -99,16 +97,20 @@ file_container* create_file_container(char* prefix)
 	fc->forw_p2 = create_file(prefix, "forw_p2");
     fc->t2 = create_file(prefix, "t2");
     fc->t2_spl = create_file(prefix, "t2_sample");
+	fc->fitness = create_file(prefix, "fitness");
     return fc;
 }
 
 FILE* create_file(char* prefix, char* appdix)
 {
-    char* fn;
-    asprintf(&fn, "%s.%s.txt", prefix, appdix);
+    char fn[100];
+    int cx = snprintf(fn, 100, "%s.%s.txt", prefix, appdix);
+	if (!(cx >= 0 && cx < 100)) {
+		printf("could not create file name!\n");
+		exit(EXIT_FAILURE);
+	}
     FILE* f;
     f = fopen(fn, "w");
-    free(fn);
     return f;
 }
 
@@ -123,6 +125,8 @@ int close_file_container(file_container* fc)
     fclose(fc->coal_p2);
 	fclose(fc->forw_p2);
     fclose(fc->t2);
+	fclose(fc->t2_spl);
+	fclose(fc->fitness);
     return EXIT_SUCCESS;
 }
 
@@ -132,6 +136,7 @@ int flush_file_container(file_container* fc)
     fflush(fc->t2_spl);
     fflush(fc->coal_p2);
 	fflush(fc->forw_p2);
+	fflush(fc->fitness);
     return EXIT_SUCCESS;
 }
 
@@ -139,19 +144,20 @@ int flush_file_container(file_container* fc)
 // calculate their coalescent time,
 // and randomly add mutations in two genomes,
 // calculate p2.
-int sample(hgt_pop** ps, hgt_params* params, int linkage_size, hgt_pop_coal_time_func coal_time_f,
+int sample(hgt_pop** ps, hgt_params* params, int linkage_size,
    file_container* files, const gsl_rng* r)
 {
     hgt_linkage** linkages = malloc(linkage_size * sizeof(hgt_linkage*));
 	hgt_genome **genomes = malloc(linkage_size * sizeof(hgt_genome*));
 
-    int i;
+    unsigned i;
     for (i = 0; i < params->replicates; i++) {
         hgt_pop* p = ps[i];
+		double current_time = p->total_time;
 		unsigned long gen = p->generation;
 		int *indices = (int *)malloc(p->size * sizeof(int));
 		int *choose = (int *)malloc(linkage_size * sizeof(int));
-		int j;
+		unsigned j;
 		for (j = 0; j < p->size; j++) {
 			indices[j] = j;
 		}
@@ -162,7 +168,7 @@ int sample(hgt_pop** ps, hgt_params* params, int linkage_size, hgt_pop_coal_time
 		hgt_stat_meanvar_list *forw_list = hgt_stat_meanvar_list_new(count);
         hgt_stat_meanvar *t2mv = hgt_stat_meanvar_new();
         
-        int s;
+        unsigned s;
         for (s = 0; s < params->sample_size; ++s) {
             // randomly choose two linear and measure their coalescent time.
 			gsl_ran_choose(r, choose, linkage_size, indices, p->size, sizeof(int));
@@ -172,14 +178,13 @@ int sample(hgt_pop** ps, hgt_params* params, int linkage_size, hgt_pop_coal_time
 				linkages[c] = p->linkages[choose[c]];
 				genomes[c] = p->genomes[choose[c]];
 			}
-            unsigned long time = hgt_linkage_find_most_rescent_ancestor_time(linkages, linkage_size);
-            // update sample results.
-                double factor = 1.0 / (double)p->size;
-                double coal_time = (double)(gen - time + 1) * factor;
-                coal_evolve(params, linkage_size, params->seq_len, coal_time, coal_list, r);
-                write_t2_all(files->t2_spl, coal_time, gen);
-                update_t2(t2mv, coal_time);
-				calc_pxy(genomes, linkage_size, params->maxl, forw_list);
+			double time = hgt_linkage_find_most_rescent_ancestor_time(linkages, linkage_size);
+			// update sample results.
+			double coal_time = (double)(current_time - time);
+			coal_evolve(params, linkage_size, params->seq_len, coal_time, coal_list, r);
+			write_t2_all(files->t2_spl, coal_time, gen);
+			update_t2(t2mv, coal_time);
+			calc_pxy(genomes, linkage_size, params->maxl, forw_list);
         }
         // write to files.
         write_pxy(files->coal_p2, coal_list, params->maxl, gen);
@@ -193,6 +198,8 @@ int sample(hgt_pop** ps, hgt_params* params, int linkage_size, hgt_pop_coal_time
 		
 		free(indices);
 		free(choose);
+
+		write_fitness(files->fitness, p);
     }
 
 	free(linkages);
@@ -204,7 +211,7 @@ int sample(hgt_pop** ps, hgt_params* params, int linkage_size, hgt_pop_coal_time
 int coal_evolve(hgt_params* params, int size, int length, double time,
     hgt_stat_meanvar_list *list, const gsl_rng* r)
 {
-    double mutation_rate = params->mu_rate;
+    double mutation_rate = params->mu_rate * 2;
     hgt_genome** genomes = create_genomes(size, length, r);
     mutate_genomes(genomes, size, mutation_rate, time, r);
     calc_pxy(genomes, size, params->maxl, list);
@@ -291,9 +298,18 @@ int write_t2(FILE* f, hgt_stat_meanvar *mv, unsigned long gen)
     return EXIT_SUCCESS;
 }
 
+void write_fitness(FILE *f, hgt_pop *p) {
+	unsigned i;
+	unsigned long gen = p->generation;
+	for (i = 0; i < p->size; i++) {
+		hgt_genome *g = p->genomes[i];
+		double fitness = hgt_genome_get_fitness(g);
+		fprintf(f, "%g\t%lu\n", fitness, gen);
+	}
+}
+
 hgt_genome** create_genomes(int size, int length, const gsl_rng* r)
 {
-    int random_seq(char* seq, int length, const gsl_rng* r);
     char* ancestor = hgt_genome_random_sequence(length, r);
 
     hgt_genome** genomes = malloc(size * sizeof(hgt_genome*));

@@ -9,8 +9,6 @@
 #ifndef __hgt__hgt_genome__
 #define __hgt__hgt_genome__
 #include <gsl/gsl_rng.h>
-extern const char DNA[5];
-extern const int NUM_DNA_CHAR;
 
 typedef struct hgt_genome hgt_genome;
 struct hgt_genome {
@@ -22,6 +20,7 @@ struct hgt_genome {
     double fitness_score;
 };
 
+void hgt_genome_set_alphabet_size(unsigned size);
 hgt_genome * hgt_genome_alloc(unsigned int seq_len, unsigned int fitness_size);
 hgt_genome * hgt_genome_new(char * seq, unsigned int seq_len, unsigned int fitness_size);
 int hgt_genome_copy(hgt_genome *g1, hgt_genome *g2);

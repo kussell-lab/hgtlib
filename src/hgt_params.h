@@ -6,6 +6,9 @@ struct _hgt_params {
     // population parameters
     unsigned int size;     // population size
     unsigned int seq_len;  // genome length
+
+	// genome sequence parameters
+	unsigned alphabet_size;
     
     // transfer parameters
     double tr_rate;                             // transfer rate
