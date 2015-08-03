@@ -14,6 +14,10 @@ add_executable(hgt_forward_coal_back hgt_forward_coal_back.c hgt_forward_coal_ba
 target_link_libraries(hgt_forward_coal_back ${COMM_LIBS})
 install(TARGETS hgt_forward_coal_back DESTINATION bin)
 
+add_executable(hgt_simu hgt_simu.c)
+target_link_libraries(hgt_simu ${COMM_LIBS})
+install(TARGETS hgt_simu DESTINATION bin)
+
 if(WIN32)
 	message("Using mpiexe for running examples.")
 	set(MPIRUN "mpiexec")
