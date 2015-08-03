@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
     params->seq_len = temp_seq_len;
 
     // specify process functions.
-    hgt_pop_sample_func sample_f = hgt_pop_sample_moran;
+    hgt_pop_sample_func sample_f = hgt_pop_sample_bsc;
     hgt_pop_frag_func frag_f = hgt_pop_frag_constant;
     
     // prepare output files.
