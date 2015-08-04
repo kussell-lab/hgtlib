@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
 
 	// set up random number generator.
 	const gsl_rng_type *T;
-	const gsl_rng *r;
+	gsl_rng *r;
 	long int seed;
 	gsl_rng_env_setup();
 	T = gsl_rng_default;
@@ -81,6 +81,10 @@ int main(int argc, char **argv) {
     // close files.
     hgt_file_container_close(fc);
     hgt_file_container_destroy(fc);
+    
+    hgt_pop_free(p);
+    hgt_params_free(params);
+    gsl_rng_free(r);
     
     return EXIT_SUCCESS;
 }

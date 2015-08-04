@@ -4,8 +4,6 @@ find_package(GSL REQUIRED)
 set(COMM_LIBS ${GSL_LIBRARIES} hgt bstrlib argtable3)
 include_directories(${GSL_INCLUDE_DIR} ${MPI_INCLUDE_PATH} . ../src ../bstrlib)
 
-set(CMAKE_C_COMPILER cc)
-
 add_executable(hgt_mpi_moran_const hgt_mpi_moran_const.c)
 target_link_libraries(hgt_mpi_moran_const ${MPI_LIBRARIES} ${COMM_LIBS})
 install(TARGETS hgt_mpi_moran_const DESTINATION bin)

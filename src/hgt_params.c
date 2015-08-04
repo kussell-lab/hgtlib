@@ -47,7 +47,10 @@ static int hgt_params_handler(void *params, const char* section, const char* nam
     } else if (MATCH("cov", "maxl")) {
         params1->maxl = (unsigned int) atoi(value);
     } else if (MATCH("output", "prefix")) {
-        params1->prefix = strdup(value);
+        size_t len = 1 + strlen(value);
+        char *prefix = malloc(len);
+        memcpy(prefix, value, len);
+        params1->prefix = prefix;
     } else if (MATCH("transfer", "hotspot_number")) {
         params1->tr_hotspot_num = (unsigned int) atoi(value);
     } else if (MATCH("transfer", "hotspot_length")) {
@@ -213,6 +216,7 @@ exit:
 }
 
 int hgt_params_free(hgt_params *params){
+    free(params->prefix);
     free(params);
     
     return EXIT_SUCCESS;

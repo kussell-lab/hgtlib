@@ -236,6 +236,7 @@ void hgt_stat_meanvar_list_destroy(hgt_stat_meanvar_list *l) {
     for (i = 0; i < l->n; i++) {
         hgt_stat_meanvar_destroy(l->meanvars[i]);
     }
+    free(l->meanvars);
     free(l);
 }
 
