@@ -31,6 +31,7 @@ double *compare_genomes(hgt_genome *g1, hgt_genome *g2);
 double *sample_t2(hgt_pop *p, int linkage_size, const gsl_rng *r);
 double sample_t2_one(hgt_linkage **linkage, int size, int linkage_size, double current_time, const gsl_rng *r);
 void write_t2(FILE *f, double *t2, int size, unsigned long gen);
+static inline void loadBar(int x, int n, int r, int w);
 int main(int argc, char **argv) {
 	// parse hgt parameters.
 	hgt_params *params;
@@ -76,6 +77,7 @@ int main(int argc, char **argv) {
 	{
 		evolve(params, p, params->sample_generations, r);
         sample(params, p, params->sample_size, r, fc);
+        loadBar(i, params->sample_time, 100, 10);
 	}
     
     // close files.
@@ -87,6 +89,32 @@ int main(int argc, char **argv) {
     gsl_rng_free(r);
     
     return EXIT_SUCCESS;
+}
+
+// Process has done i out of n rounds,
+// and we want a bar of width w and resolution r.
+static inline void loadBar(int x, int n, int r, int w)
+{
+    // Only update r times.
+    if ( x % (n/r +1) != 0 ) return;
+    
+    // Calculuate the ratio of complete-to-incomplete.
+    float ratio = x/(float)n;
+    int   c     = ratio * w;
+    
+    // Show the percentage complete.
+    printf("%3d%% [", (int)(ratio*100) );
+    
+    // Show the load bar.
+    for (int x=0; x<c; x++)
+        printf("=");
+    
+    for (int x=c; x<w; x++)
+        printf(" ");
+    
+    // ANSI Control codes to go back to the
+    // previous line and clear it.
+    printf("]\n\033[F\033[J");
 }
 
 void specify_evolution_processes(hgt_params *params) {
@@ -168,7 +196,7 @@ void sample(hgt_params *params, hgt_pop *p, unsigned sample_size, const gsl_rng 
         write_t2(fc->t4, t2, t2_size, gen);
         free(t2);
 	}
-    printf("finished sample, %u\n", gen);
+    
     // write results to files.
     write_pxy(fc->p2, p2_list, params->maxl, gen);
     write_pxy(fc->p3, p3_list, params->maxl, gen);
