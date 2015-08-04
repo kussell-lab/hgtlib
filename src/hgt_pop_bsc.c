@@ -37,17 +37,21 @@ double hgt_pop_sample_bsc(hgt_pop *p, const gsl_rng *r) {
     int *deaths;
     deaths = (int *) malloc(num_offsprings * sizeof(int));
     gsl_ran_choose(r, deaths, num_offsprings, indices, p->size - 1, sizeof(int));
+    
+    // copy genomes.
     for (i = 0; i < num_offsprings; i++) {
-        // copy the genome.
-        int d = deaths[i];
+        int d;
+        d = deaths[i];
         hgt_genome_copy(p->genomes[d], p->genomes[birth]);
-        // update linkage tracking.
-        linkage_birth_dead(p->linkages, birth, d, current_time);
-        unsigned l;
-        for (l = 0; l < p->linkage_size; l++) {
-            linkage_birth_dead(p->locus_linkages[l], birth, d, current_time);
-        }
     }
+    
+    // update linkages.
+    linkage_update_bsc(p->linkages, birth, deaths, num_offsprings, current_time);
+    unsigned l;
+    for (l = 0; l < p->linkage_size; l++) {
+        linkage_update_bsc(p->locus_linkages[l], birth, deaths, num_offsprings, current_time);
+    }
+    
     
     free(deaths);
     free(indices);
@@ -73,4 +77,17 @@ int random_num_offsprings_bsc(unsigned int n, const gsl_rng *r) {
         }
     }
     return k;
+}
+
+void linkage_update_bsc(hgt_linkage **linkages, int birth, int *death, int num, double birth_time) {
+    hgt_linkage *parent;
+    parent = linkages[birth];
+    linkages[birth] = hgt_linkage_new(parent, birth_time);
+    int i;
+    for (i = 0; i < num; i++) {
+        int d;
+        d = death[i];
+        hgt_linkage_free(linkages[d]);
+        linkages[d] = hgt_linkage_new(parent, birth_time);
+    }
 }

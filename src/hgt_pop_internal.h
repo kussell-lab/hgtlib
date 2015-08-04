@@ -27,4 +27,5 @@ unsigned long next_power2(unsigned int len);
 void increase_population_time(hgt_pop *p, double time);
 
 int random_num_offsprings_bsc(unsigned int n, const gsl_rng *r);
+void linkage_update_bsc(hgt_linkage **linkages, int birth, int *death, int num, double birth_time);
 #endif //HGT_HGT_POP_INTERNAL_H
