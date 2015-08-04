@@ -62,12 +62,15 @@ double hgt_pop_sample_bsc(hgt_pop *p, const gsl_rng *r) {
 int random_num_offsprings_bsc(unsigned int n, const gsl_rng *r) {
     double u = gsl_rng_uniform_pos(r);
     double total = 0;
-    int k = 1;
-    while (total < u) {
+    
+    int k;
+    for (k = 1; k < n-1; k++) {
         double prop = (double) n / (double) (n - 1);
         prop /= ((double) (k * (k+1)));
         total += prop;
+        if (total > u) {
+            break;
+        }
     }
-    
     return k;
 }

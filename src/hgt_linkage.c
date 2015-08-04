@@ -145,7 +145,7 @@ int hgt_linkage_prune(hgt_linkage *l) {
 		{
 			break;
 		}
-        l->parent = parent->parent;
+        l->parent = grandparent;
         free(parent);
         parent = l->parent;
     }

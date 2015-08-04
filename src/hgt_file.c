@@ -26,6 +26,8 @@ hgt_file_container *hgt_file_container_create(char *prefix) {
 	fc->cov = create_file(prefix, "cov", "txt");
 	fc->ks = create_file(prefix, "ks", "txt");
 	fc->t2 = create_file(prefix, "t2", "txt");
+    fc->t3 = create_file(prefix, "t3", "txt");
+    fc->t4 = create_file(prefix, "t4", "txt");
 	return fc;
 }
 
@@ -36,6 +38,8 @@ void hgt_file_container_close(hgt_file_container *fc) {
 	fclose(fc->cov);
 	fclose(fc->ks);
 	fclose(fc->t2);
+    fclose(fc->t3);
+    fclose(fc->t4);
 }
 
 void hgt_file_container_destroy(hgt_file_container *fc) {
@@ -49,6 +53,8 @@ void hgt_file_container_flush(hgt_file_container *fc) {
 	fflush(fc->cov);
 	fflush(fc->ks);
 	fflush(fc->t2);
+    fflush(fc->t3);
+    fflush(fc->t4);
 }
 
 void hgt_file_container_write_headers(hgt_file_container *fc) {
@@ -57,5 +63,7 @@ void hgt_file_container_write_headers(hgt_file_container *fc) {
 	fprintf(fc->p4, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
 	fprintf(fc->cov, "#l\tscov\trcov\tpxpy\ttcov\tscov var\trcov var\tpxpy var\ttcov var\tsample n\tgenerations\n");
 	fprintf(fc->ks, "#ks\tvd\tvar ks\tvar vd\tgenerations\n");
-	fprintf(fc->t2, "#l\tt2\tt3\tt4\tt2_var\tt3_var\tt4_var\tn\tgeneration\n");
+	fprintf(fc->t2, "#l\tt\tgeneration\n");
+    fprintf(fc->t3, "#l\tt\tgeneration\n");
+    fprintf(fc->t4, "#l\tt\tgeneration\n");
 }

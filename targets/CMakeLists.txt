@@ -18,6 +18,8 @@ add_executable(hgt_simu hgt_simu.c)
 target_link_libraries(hgt_simu ${COMM_LIBS})
 install(TARGETS hgt_simu DESTINATION bin)
 
+add_custom_target(hgt_simu_debug COMMAND "${CMAKE_CURRENT_BINARY_DIR}/Debug/hgt_simu" -C "${CMAKE_CURRENT_LIST_DIR}/examples/run_hgt_simu_example1.cfg" DEPENDS hgt_simu)
+
 if(WIN32)
 	message("Using mpiexe for running examples.")
 	set(MPIRUN "mpiexec")

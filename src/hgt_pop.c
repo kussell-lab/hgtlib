@@ -816,8 +816,9 @@ int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, unsigned sample, const 
     for (i = 0; i < sample; i++) {
         // randomly choose two distinct genomes for comparison.
 		hgt_genome **selected_genomes = (hgt_genome **)malloc(2 * sizeof(hgt_genome *));
-		gsl_ran_choose(rng, selected_genomes, 2, p->genomes, p->size, sizeof(hgt_genome));
+		gsl_ran_choose(rng, selected_genomes, 2, p->genomes, p->size, sizeof(hgt_genome*));
 		unsigned seq_len = hgt_genome_get_seq_size(selected_genomes[0]);
+        matrix[i] = (short *) malloc(seq_len * sizeof(short));
 		for ( j = 0; j < seq_len; j++)
 		{
 			char *seq_a, *seq_b;

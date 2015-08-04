@@ -79,7 +79,7 @@ void file_container_write_headers(file_container *fc) {
 	fprintf(fc->q2, "#l\tt2\tt3\tt4\tt2_var\tt3_var\tt4_var\tn\tgeneration\n");
 }
 
-int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, double *buf, int dim, int max_linkage, int sample_size, unsigned long generation);
+int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, double *buf, int dim, int max_linkage, int sample_size, double current_time);
 int check_mpi_error_code(int error_code, char * ops_type, char * parent_func);
 
 int main(int argc, char *argv[]) {
@@ -94,8 +94,6 @@ int main(int argc, char *argv[]) {
                 hgt_params * params,
                 hgt_pop ** ps,
                 hgt_pop_calc_most_recent_coal_func coal_time_func,
-                FILE * fp,
-                int generation,
                 int rank,
                 int numprocs,
                 const gsl_rng * rng);
@@ -165,7 +163,6 @@ int main(int argc, char *argv[]) {
     unsigned i;
     time_t start, end;
     hgt_pop_sample_func sample_f;
-    hgt_pop_coal_time_func coal_time_f;
     hgt_pop_frag_func frag_f;
     switch (params->frag_type) {
         case 1:
@@ -178,15 +175,18 @@ int main(int argc, char *argv[]) {
     switch (params->reprodution) {
         case 1:
             sample_f = hgt_pop_sample_wf;
-            coal_time_f = hgt_pop_coal_time_wf;
             break;
         case 2:
             sample_f = hgt_pop_sample_linear_selection;
-            coal_time_f = hgt_pop_coal_time_linear_selection;
+            break;
+        case 3:
+            sample_f = hgt_pop_sample_bsc;
+            if (rank == 0) {
+                printf("using BSC model\n");
+            }
             break;
         default:
             sample_f = hgt_pop_sample_moran;
-            coal_time_f = hgt_pop_coal_time_moran;
             break;
     }
     
@@ -200,10 +200,9 @@ int main(int argc, char *argv[]) {
         pxy_calc(p2means, p2vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p2, rng);
         pxy_calc(p3means, p3vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p3, rng);
         pxy_calc(p4means, p4vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p4, rng);
-        
         cov_calc(covmeans, covvars, ps, params, rank, numprocs, rng);
-        t2_calc(t2means, t2vars, params, ps, hgt_pop_calc_most_recent_ancestor_time, fc->t2, current_generation, rank, numprocs, rng);
-        t2_calc(q2means, q2vars, params, ps, hgt_pop_calc_most_recent_coal_time, fc->q2, current_generation, rank, numprocs, rng);
+        t2_calc(t2means, t2vars, params, ps, hgt_pop_calc_most_recent_ancestor_time, rank, numprocs, rng);
+        t2_calc(q2means, q2vars, params, ps, hgt_pop_calc_most_recent_coal_time, rank, numprocs, rng);
         if (rank == 0) {
             write_pxy(fc->p2, params->maxl, p2means, p2vars, current_generation);
             write_pxy(fc->p3, params->maxl, p3means, p3vars, current_generation);
@@ -327,7 +326,7 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
     double *buf;
     hgt_cov_result *result ;
     result = hgt_cov_result_alloc(params->maxl);
-    buf = malloc((params->maxl*4+4)*sizeof(double));
+    buf = malloc(count*sizeof(double));
 	unsigned i;
     for (i = 0; i < params->replicates; i++) {
         // calculate covariance result
@@ -344,7 +343,6 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
         }
         buf[4*params->maxl] = result->ks;
         buf[4*params->maxl + 1] = result->vd;
-        
         if (rank != 0) {
             error_code = MPI_Send(buf, count, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
 			check_mpi_error_code(error_code, "MPI_Send", func_name);
@@ -384,8 +382,6 @@ int t2_calc(hgt_stat_mean *** t2means,
              hgt_params * params,
              hgt_pop ** ps,
              hgt_pop_calc_most_recent_coal_func coal_time_func,
-             FILE * fp,
-             int generation,
              int rank,
              int numprocs,
              const gsl_rng * rng) {
@@ -405,16 +401,18 @@ int t2_calc(hgt_stat_mean *** t2means,
     tag = 0;
     
     for (i = 0; i < params->replicates; i++) {
+        double current_time = hgt_pop_get_time(ps[i]);
 		int k;
         for (k = 0; k < params->linkage_size; k++) {
             for (j = 0; j < max_linkage; j++) {
+                
                 coal_time_func(ps[i]->locus_linkages[k], ps[i]->size, params->sample_size, buf+(max_linkage * k + j) * params->sample_size, linkage_sizes[j], rng);
             }
         }
+        
         for (j = 0; j < max_linkage; j++) {
             coal_time_func(ps[i]->linkages, ps[i]->size, params->sample_size, buf+(max_linkage * params->linkage_size + j) * params->sample_size, linkage_sizes[j], rng);
         }
-        
         if (rank != 0) {
             error_code = MPI_Send(buf, count, MPI_UNSIGNED_LONG, dest, tag, MPI_COMM_WORLD);
 			check_mpi_error_code(error_code, "MPI_Send", func_name);
@@ -426,7 +424,7 @@ int t2_calc(hgt_stat_mean *** t2means,
                     error_code = MPI_Recv(buf, count, MPI_UNSIGNED_LONG, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 					check_mpi_error_code(error_code, "MPI_Recv", func_name);
                 }
-                update_t2(t2means, t2vars, buf, max_linkage, dim, params->sample_size, generation);
+                update_t2(t2means, t2vars, buf, max_linkage, dim, params->sample_size, current_time);
             }
         }
     }
@@ -434,7 +432,7 @@ int t2_calc(hgt_stat_mean *** t2means,
     return EXIT_SUCCESS;
 }
 
-int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, double *buf, int max_linkage, int dim, int sample_size, unsigned long generation) {
+int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, double *buf, int max_linkage, int dim, int sample_size, double current_time) {
     int i, j, k;
     double v, t;
     for (i = 0; i < dim; i++) {
@@ -442,7 +440,7 @@ int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, double *buf
             for (k = 0; k < sample_size; k++) {
                  v =buf[(i*max_linkage + j) * sample_size + k];
                  if (v > 0) {
-                    t = generation - v + 1;
+                    t = current_time - v;
                     hgt_stat_mean_increment(t2means[i][j], (double)t);
                     hgt_stat_variance_increment(t2vars[i][j], (double)t);
                  }

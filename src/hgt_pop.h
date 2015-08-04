@@ -22,6 +22,7 @@
 #define MORAN 0;
 #define WRIGHT_FISHER 1;
 #define LINEAR_SELECTION 2;
+#define BSC 3;
 #define CONSTANT_FRAG 0;
 #define EXP_FRAG 1;
 
