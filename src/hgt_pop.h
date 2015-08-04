@@ -58,6 +58,7 @@ typedef double (*hgt_pop_coal_time_func)(unsigned long p_size, const gsl_rng *r)
 double hgt_pop_coal_time_moran(unsigned long p_size, const gsl_rng *r);
 double hgt_pop_coal_time_wf(unsigned long p_size, const gsl_rng *r);
 double hgt_pop_coal_time_linear_selection(unsigned long p_size, const gsl_rng *r);
+double hgt_pop_coal_time_bsc(unsigned long p_size, const gsl_rng *r);
 
 typedef unsigned (*hgt_pop_frag_func)(hgt_params *params, const gsl_rng *r);
 unsigned hgt_pop_frag_constant(hgt_params *params, const gsl_rng *r);

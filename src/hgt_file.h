@@ -12,6 +12,9 @@ struct _file_container {
 	FILE *t2;
     FILE *t3;
     FILE *t4;
+    FILE *q2;
+    FILE *q3;
+    FILE *q4;
 };
 
 hgt_file_container *hgt_file_container_create(char *prefix);

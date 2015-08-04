@@ -28,6 +28,9 @@ hgt_file_container *hgt_file_container_create(char *prefix) {
 	fc->t2 = create_file(prefix, "t2", "txt");
     fc->t3 = create_file(prefix, "t3", "txt");
     fc->t4 = create_file(prefix, "t4", "txt");
+    fc->q2 = create_file(prefix, "q2", "txt");
+    fc->q3 = create_file(prefix, "q3", "txt");
+    fc->q4 = create_file(prefix, "q4", "txt");
 	return fc;
 }
 
@@ -40,6 +43,9 @@ void hgt_file_container_close(hgt_file_container *fc) {
 	fclose(fc->t2);
     fclose(fc->t3);
     fclose(fc->t4);
+    fclose(fc->q2);
+    fclose(fc->q3);
+    fclose(fc->q4);
 }
 
 void hgt_file_container_destroy(hgt_file_container *fc) {
@@ -55,6 +61,9 @@ void hgt_file_container_flush(hgt_file_container *fc) {
 	fflush(fc->t2);
     fflush(fc->t3);
     fflush(fc->t4);
+    fflush(fc->q2);
+    fflush(fc->q3);
+    fflush(fc->q4);
 }
 
 void hgt_file_container_write_headers(hgt_file_container *fc) {
@@ -66,4 +75,7 @@ void hgt_file_container_write_headers(hgt_file_container *fc) {
 	fprintf(fc->t2, "#l\tt\tgeneration\n");
     fprintf(fc->t3, "#l\tt\tgeneration\n");
     fprintf(fc->t4, "#l\tt\tgeneration\n");
+    fprintf(fc->q2, "#l\tt\tgeneration\n");
+    fprintf(fc->q3, "#l\tt\tgeneration\n");
+    fprintf(fc->q4, "#l\tt\tgeneration\n");
 }

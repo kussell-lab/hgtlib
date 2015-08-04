@@ -229,7 +229,7 @@ int main(int argc, char *argv[]) {
         
         end = clock();
         if (rank == 0) {
-            printf("rank %d, %d using time = %lld sec\n", rank, i, (end - start)/CLOCKS_PER_SEC);
+            printf("rank %d, %d using time = %ld sec\n", rank, i, (end - start)/CLOCKS_PER_SEC);
         }
     }
     

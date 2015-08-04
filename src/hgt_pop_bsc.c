@@ -57,7 +57,7 @@ double hgt_pop_sample_bsc(hgt_pop *p, const gsl_rng *r) {
     free(indices);
     
     double time;
-    time = hgt_pop_coal_time_moran(p->size, r);
+    time = hgt_pop_coal_time_bsc(p->size, r);
     increase_population_time(p, time);
     
     return time;
@@ -90,4 +90,10 @@ void linkage_update_bsc(hgt_linkage **linkages, int birth, int *death, int num, 
         hgt_linkage_free(linkages[d]);
         linkages[d] = hgt_linkage_new(parent, birth_time);
     }
+}
+
+double hgt_pop_coal_time_bsc(unsigned long size, const gsl_rng *r) {
+    double time;
+    time = 1.0;
+    return time;
 }

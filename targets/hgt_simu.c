@@ -28,8 +28,8 @@ double *calc_pxy(double *distance1, double *distance2, int length);
 void write_pxy(FILE* f, hgt_stat_meanvar_list *list, int maxl, unsigned long gen);
 double *calc_distance(hgt_genome *g1, hgt_genome *g2);
 double *compare_genomes(hgt_genome *g1, hgt_genome *g2);
-double *sample_t2(hgt_pop *p, int linkage_size, const gsl_rng *r);
-double sample_t2_one(hgt_linkage **linkage, int size, int linkage_size, double current_time, const gsl_rng *r);
+double *sample_t2(hgt_linkage_find_time_func linkage_find_func, hgt_pop *p, int linkage_size, const gsl_rng *r);
+double sample_t2_one(hgt_linkage_find_time_func linkage_find_func, hgt_linkage **linkage, int size, int linkage_size, double current_time, const gsl_rng *r);
 void write_t2(FILE *f, double *t2, int size, unsigned long gen);
 static inline void loadBar(int x, int n, int r, int w);
 int main(int argc, char **argv) {
@@ -172,28 +172,46 @@ void sample(hgt_params *params, hgt_pop *p, unsigned sample_size, const gsl_rng 
         pxy = sample_pxy(p, hgt_cov_sample_p3, r);
         update_pxy(p3_list, pxy);
         free(pxy);
-        pxy = sample_pxy(p, hgt_cov_sample_p3, r);
+        pxy = sample_pxy(p, hgt_cov_sample_p4, r);
         update_pxy(p4_list, pxy);
         free(pxy);
         
         // sample t2;
         double *t2;
         int t2_size;
-        t2 = sample_t2(p, 2, r);
+        t2 = sample_t2(hgt_linkage_find_most_rescent_ancestor_time, p, 2, r);
         t2_size = p->linkage_size + 1;
         write_t2(fc->t2, t2, t2_size, gen);
         free(t2);
         
         // sample t3;
-        t2 = sample_t2(p, 3, r);
+        t2 = sample_t2(hgt_linkage_find_most_rescent_ancestor_time, p, 3, r);
         t2_size = p->linkage_size + 1;
         write_t2(fc->t3, t2, t2_size, gen);
         free(t2);
         
         // sample t4;
-        t2 = sample_t2(p, 4, r);
+        t2 = sample_t2(hgt_linkage_find_most_rescent_ancestor_time, p, 4, r);
         t2_size = p->linkage_size + 1;
         write_t2(fc->t4, t2, t2_size, gen);
+        free(t2);
+        
+        // sample q2;
+        t2 = sample_t2(hgt_linkage_find_most_rescent_coalescence_time, p, 2, r);
+        t2_size = p->linkage_size + 1;
+        write_t2(fc->q2, t2, t2_size, gen);
+        free(t2);
+        
+        // sample q3;
+        t2 = sample_t2(hgt_linkage_find_most_rescent_coalescence_time, p, 3, r);
+        t2_size = p->linkage_size + 1;
+        write_t2(fc->q3, t2, t2_size, gen);
+        free(t2);
+        
+        // sample q4;
+        t2 = sample_t2(hgt_linkage_find_most_rescent_coalescence_time, p, 4, r);
+        t2_size = p->linkage_size + 1;
+        write_t2(fc->q4, t2, t2_size, gen);
         free(t2);
 	}
     
@@ -302,7 +320,7 @@ double *compare_genomes(hgt_genome *g1, hgt_genome *g2)
 	return results;
 }
 
-double *sample_t2(hgt_pop *p, int linkage_size, const gsl_rng *r) {
+double *sample_t2(hgt_linkage_find_time_func linkage_find_func, hgt_pop *p, int linkage_size, const gsl_rng *r) {
     double current_time;
     current_time = hgt_pop_get_time(p);
     double *t2;
@@ -311,17 +329,17 @@ double *sample_t2(hgt_pop *p, int linkage_size, const gsl_rng *r) {
     for (l = 0; l < p->linkage_size; l++) {
         hgt_linkage **linkages;
         linkages = p->locus_linkages[l];
-        t2[l] = sample_t2_one(linkages, p->size, linkage_size, current_time, r);
+        t2[l] = sample_t2_one(linkage_find_func, linkages, p->size, linkage_size, current_time, r);
     }
-    t2[p->linkage_size] = sample_t2_one(p->linkages, p->size, linkage_size, current_time, r);
+    t2[p->linkage_size] = sample_t2_one(linkage_find_func, p->linkages, p->size, linkage_size, current_time, r);
     return t2;
 }
 
-double sample_t2_one(hgt_linkage **linkages, int size, int linkage_size, double current_time, const gsl_rng *r) {
+double sample_t2_one(hgt_linkage_find_time_func linkage_find_func, hgt_linkage **linkages, int size, int linkage_size, double current_time, const gsl_rng *r) {
     hgt_linkage ** chose = (hgt_linkage **) malloc(linkage_size * sizeof(hgt_linkage*));
     gsl_ran_choose(r, chose, linkage_size, linkages, size, sizeof(hgt_linkage*));
     double time, coal_time;
-    time = hgt_linkage_find_most_rescent_ancestor_time(chose, linkage_size);
+    time = linkage_find_func(chose, linkage_size);
     coal_time = current_time - time;
     free(chose);
     return coal_time;
