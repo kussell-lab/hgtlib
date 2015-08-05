@@ -32,7 +32,7 @@ double *compare_genomes(hgt_genome *g1, hgt_genome *g2);
 double *sample_t2(hgt_linkage_find_time_func linkage_find_func, hgt_pop *p, int linkage_size, const gsl_rng *r);
 double sample_t2_one(hgt_linkage_find_time_func linkage_find_func, hgt_linkage **linkage, int size, int linkage_size, double current_time, const gsl_rng *r);
 void write_t2(FILE *f, double *t2, int size, unsigned long gen);
-void loadBar(int x, int n, int r, int w);
+static void loadBar(int x, int n, int r, int w);
 hgt_cov_result * calc_cov(hgt_pop *p, unsigned maxl, unsigned sample_size, const gsl_rng *r);
 void update_cov(hgt_stat_meanvar_list *list, hgt_cov_result *result);
 void write_cov(FILE *f, hgt_stat_meanvar_list *list, int maxl, unsigned long gen);
