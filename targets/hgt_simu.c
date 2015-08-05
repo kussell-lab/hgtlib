@@ -15,6 +15,7 @@
 #include "hgt_pop.h"
 #include "hgt_file.h"
 #include "hgt_stat.h"
+#include "hgt_cov.h"
 // global variables.
 hgt_pop_sample_func SAMPLE_FUNC;
 hgt_pop_frag_func FRAG_FUNC;
@@ -31,7 +32,12 @@ double *compare_genomes(hgt_genome *g1, hgt_genome *g2);
 double *sample_t2(hgt_linkage_find_time_func linkage_find_func, hgt_pop *p, int linkage_size, const gsl_rng *r);
 double sample_t2_one(hgt_linkage_find_time_func linkage_find_func, hgt_linkage **linkage, int size, int linkage_size, double current_time, const gsl_rng *r);
 void write_t2(FILE *f, double *t2, int size, unsigned long gen);
-static inline void loadBar(int x, int n, int r, int w);
+void loadBar(int x, int n, int r, int w);
+hgt_cov_result * calc_cov(hgt_pop *p, unsigned maxl, unsigned sample_size, const gsl_rng *r);
+void update_cov(hgt_stat_meanvar_list *list, hgt_cov_result *result);
+void write_cov(FILE *f, hgt_stat_meanvar_list *list, int maxl, unsigned long gen);
+void update_ks(hgt_stat_meanvar_list *list, hgt_cov_result *result);
+void write_ks(FILE *f, hgt_stat_meanvar_list *list, unsigned long gen);
 int main(int argc, char **argv) {
 	// parse hgt parameters.
 	hgt_params *params;
@@ -93,14 +99,14 @@ int main(int argc, char **argv) {
 
 // Process has done i out of n rounds,
 // and we want a bar of width w and resolution r.
-static inline void loadBar(int x, int n, int r, int w)
+static void loadBar(int x, int n, int r, int w)
 {
     // Only update r times.
     if ( x % (n/r +1) != 0 ) return;
     
     // Calculuate the ratio of complete-to-incomplete.
     float ratio = x/(float)n;
-    int   c     = ratio * w;
+    int c= (int) ratio * w;
     
     // Show the percentage complete.
     printf("%3d%% [", (int)(ratio*100) );
@@ -161,6 +167,8 @@ void sample(hgt_params *params, hgt_pop *p, unsigned sample_size, const gsl_rng 
     hgt_stat_meanvar_list *p2_list = hgt_stat_meanvar_list_new(count);
     hgt_stat_meanvar_list *p3_list = hgt_stat_meanvar_list_new(count);
     hgt_stat_meanvar_list *p4_list = hgt_stat_meanvar_list_new(count);
+	hgt_stat_meanvar_list *cov_list = hgt_stat_meanvar_list_new(params->maxl * 4);
+	hgt_stat_meanvar_list *ks_list = hgt_stat_meanvar_list_new(2);
     unsigned i;
 	for (i = 0; i < sample_size; i++)
 	{
@@ -214,16 +222,26 @@ void sample(hgt_params *params, hgt_pop *p, unsigned sample_size, const gsl_rng 
         write_t2(fc->q4, t2, t2_size, gen);
         free(t2);
 	}
+
+	// sample and calculate covs.
+	hgt_cov_result *cov_result;
+	cov_result = calc_cov(p, params->maxl, sample_size, r);
+	update_cov(cov_list, cov_result);
+	update_ks(ks_list, cov_result);
     
     // write results to files.
     write_pxy(fc->p2, p2_list, params->maxl, gen);
     write_pxy(fc->p3, p3_list, params->maxl, gen);
     write_pxy(fc->p4, p4_list, params->maxl, gen);
+	write_cov(fc->cov, cov_list, params->maxl, gen);
+	write_ks(fc->ks, ks_list, gen);
     
     // destroy meanvar lists.
     hgt_stat_meanvar_list_destroy(p2_list);
     hgt_stat_meanvar_list_destroy(p3_list);
     hgt_stat_meanvar_list_destroy(p4_list);
+	hgt_stat_meanvar_list_destroy(cov_list);
+	hgt_stat_meanvar_list_destroy(ks_list);
     
     hgt_file_container_flush(fc);
 }
@@ -350,4 +368,71 @@ void write_t2(FILE *f, double *t2, int size, unsigned long gen) {
     for (i = 0; i < size; i++) {
         fprintf(f, "%d\t%g\t%lu\n", i, t2[i], gen);
     }
+}
+
+hgt_cov_result * calc_cov(hgt_pop *p, unsigned maxl, unsigned sample_size, const gsl_rng *r) {
+	hgt_cov_result *result;
+	result = hgt_cov_result_alloc(maxl);
+	hgt_pop_calc_cov(result, p, sample_size, r); 
+	return result;
+}
+
+void update_cov(hgt_stat_meanvar_list *list, hgt_cov_result *result) {
+	int i;
+	for (i = 0; i < result->maxl; i++)
+	{
+		hgt_stat_meanvar_list_increment(list, 4*i, result->scov[i]);
+		hgt_stat_meanvar_list_increment(list, 4 * i + 1, result->rcov[i]);
+		hgt_stat_meanvar_list_increment(list, 4 * i + 2, result->pxpy[i]);
+		hgt_stat_meanvar_list_increment(list, 4 * i + 3, result->tcov[i]);
+	}
+}
+
+void write_cov(FILE *f, hgt_stat_meanvar_list *list, int maxl, unsigned long gen) {
+	int i, j, k, n;
+	for (i = 0; i < maxl; i++)
+	{
+		fprintf(f, "%d\t", i);
+		for (j = 0; j < 4; j++)
+		{
+			k = 4 * i + j;
+			hgt_stat_meanvar *mv;
+			mv = hgt_stat_meanvar_list_get(list, k);
+			double m;
+			m = hgt_stat_mean_get(mv->mean);
+			fprintf(f, "%g\t", m);
+		}
+
+		for ( j = 0; j < 4; j++)
+		{
+			k = 4 * i + j;
+			hgt_stat_meanvar *mv;
+			mv = hgt_stat_meanvar_list_get(list, k);
+			double v;
+			v = hgt_stat_variance_get(mv->var);
+			fprintf(f, "%g\t", v);
+			n = hgt_stat_variance_get_n(mv->var);
+		}
+		fprintf(f, "%d\t%lu\n", n, gen);
+	}
+}
+
+void update_ks(hgt_stat_meanvar_list *list, hgt_cov_result *result) {
+	hgt_stat_meanvar_list_increment(list, 0, result->ks);
+	hgt_stat_meanvar_list_increment(list, 1, result->vd);
+}
+
+void write_ks(FILE *f, hgt_stat_meanvar_list *list, unsigned long gen) 
+{
+	double ks, vd, ksvar, vdvar;
+	int n;
+	hgt_stat_meanvar *ksmv, *vdmv;
+	ksmv = hgt_stat_meanvar_list_get(list, 0);
+	vdmv = hgt_stat_meanvar_list_get(list, 1);
+	ks = hgt_stat_mean_get(ksmv->mean);
+	vd = hgt_stat_mean_get(vdmv->mean);
+	ksvar = hgt_stat_variance_get(ksmv->var);
+	vdvar = hgt_stat_variance_get(vdmv->var);
+	n = hgt_stat_mean_get_n(ksmv->mean);
+	fprintf(f, "%g\t%g\t%g\t%g\t%d\t%lu\n", ks, vd, ksvar, vdvar, n, gen);
 }
