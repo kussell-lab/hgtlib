@@ -330,8 +330,8 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
 	unsigned i;
     for (i = 0; i < params->replicates; i++) {
         // calculate covariance result
-        hgt_pop_calc_cov(result, ps[i], params->sample_size, rng);
-        // hgt_pop_calc_cov_all(result, ps[i]);
+        // hgt_pop_calc_cov(result, ps[i], params->sample_size, rng);
+        hgt_pop_calc_cov_all(result, ps[i]);
         // load buf the result
 		unsigned j;
         for (j = 0; j < params->maxl; j++) {
