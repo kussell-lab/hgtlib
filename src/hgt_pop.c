@@ -532,34 +532,63 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
             hgt_pop_fitness_mutate_step(p, params, r);
         }
     }
+    
+    int weight_size = 2;
+    double weights[2];
+    weights[0] = params->mu_rate * (double) (p->seq_len * p->size);
+    weights[0] = params->tr_rate * (double) (p->seq_len * p->size);
+    double total = weights[0] + weights[1];
+    double mu = total * time;
+    int count = gsl_ran_poisson(r, mu);
+    int k;
+    for (k = 0; k < count; k++) {
+        int g = gsl_rng_uniform_int(r, p->size);
+        int choice = hgt_utils_Roulette_Wheel_select(weights, weight_size, r);
+        int pos = gsl_rng_uniform_int(r, p->seq_len);
+        if (choice == 0) {
+            hgt_genome_mutate(p->genomes[g], pos, r);
+        }
+        else {
+            int d = gsl_rng_uniform_int(r, p->size);
+            if (d != g) {
+                hgt_genome *receiver = p->genomes[g];
+                hgt_genome *donor = p->genomes[d];
+                int frag_len = frag_f(params, r);
+                hgt_genome_transfer(receiver, donor, pos, frag_len);
+                hgt_pop_transfer_linkages(p, d, g, frag_len, pos);
+            }
+        }
+    }
 
-	unsigned g;
-	for (g = 0; g < p->size; g++) {
-		int weight_size = 2;
-		double weights[2];
-		weights[0] = params->mu_rate * (double)p->seq_len;
-		weights[1] = params->tr_rate * (double)p->seq_len;
-		double total = weights[0] + weights[1];
-		double mu = total * time;
-		int count = gsl_ran_poisson(r, mu);
-		int k;
-		for (k = 0; k < count; k++) {
-			int choice = hgt_utils_Roulette_Wheel_select(weights, weight_size, r);
-			int pos = gsl_rng_uniform_int(r, p->seq_len);
-			if (choice == 0) {
-				hgt_genome_mutate(p->genomes[g], pos, r);
-			}
-			else {
-				int d = gsl_rng_uniform_int(r, p->size);
-				hgt_genome *receiver = p->genomes[g];
-				hgt_genome *donor = p->genomes[d];
-				int frag_len = frag_f(params, r);
-				hgt_genome_transfer(receiver, donor, pos, frag_len);
-				hgt_pop_transfer_linkages(p, d, g, frag_len, pos);
-			}
-		}
-
-	}
+//	unsigned g;
+//	for (g = 0; g < p->size; g++) {
+//		int weight_size = 2;
+//		double weights[2];
+//		weights[0] = params->mu_rate * (double)p->seq_len;
+//		weights[1] = params->tr_rate * (double)p->seq_len;
+//		double total = weights[0] + weights[1];
+//		double mu = total * time;
+//		int count = gsl_ran_poisson(r, mu);
+//		int k;
+//		for (k = 0; k < count; k++) {
+//			int choice = hgt_utils_Roulette_Wheel_select(weights, weight_size, r);
+//			int pos = gsl_rng_uniform_int(r, p->seq_len);
+//			if (choice == 0) {
+//				hgt_genome_mutate(p->genomes[g], pos, r);
+//			}
+//			else {
+//				int d = gsl_rng_uniform_int(r, p->size);
+//                if (d != g) {
+//                    hgt_genome *receiver = p->genomes[g];
+//                    hgt_genome *donor = p->genomes[d];
+//                    int frag_len = frag_f(params, r);
+//                    hgt_genome_transfer(receiver, donor, pos, frag_len);
+//                    hgt_pop_transfer_linkages(p, d, g, frag_len, pos);
+//                }
+//			}
+//		}
+//
+//	}
 
 	if (p->generation % 10 == 0)
 	{

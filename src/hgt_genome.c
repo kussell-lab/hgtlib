@@ -149,5 +149,7 @@ char * hgt_genome_random_sequence(int length, const gsl_rng *r) {
 }
 
 char random_char(const gsl_rng *r) {
-	return (char)(gsl_rng_uniform_int(r, NUM_DNA_CHAR) + 1);
+    unsigned long i = gsl_rng_uniform_int(r, NUM_DNA_CHAR) + 1;
+    char c = i + '0';
+    return c;
 }

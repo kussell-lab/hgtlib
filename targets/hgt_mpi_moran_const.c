@@ -197,6 +197,14 @@ int main(int argc, char *argv[]) {
         start = clock();
 
         hgt_utils_batch_evolve(ps, params->replicates, params, sample_f, frag_f, rng);
+        
+        end = clock();
+        
+        if (rank == 0) {
+            printf("%d, evolve using time = %ld sec\n", i, (end - start)/CLOCKS_PER_SEC);
+        }
+        
+        start = clock();
         pxy_calc(p2means, p2vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p2, rng);
         pxy_calc(p3means, p3vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p3, rng);
         pxy_calc(p4means, p4vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p4, rng);
@@ -228,9 +236,11 @@ int main(int argc, char *argv[]) {
         }
         
         end = clock();
+        
         if (rank == 0) {
-            printf("rank %d, %d using time = %ld sec\n", rank, i, (end - start)/CLOCKS_PER_SEC);
+            printf("%d, calculation using time = %ld sec\n", i, (end - start)/CLOCKS_PER_SEC);
         }
+        
     }
     
     // write_pops(ps, params, rank, numprocs);
@@ -330,8 +340,8 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
 	unsigned i;
     for (i = 0; i < params->replicates; i++) {
         // calculate covariance result
-        // hgt_pop_calc_cov(result, ps[i], params->sample_size, rng);
-        hgt_pop_calc_cov_all(result, ps[i]);
+         hgt_pop_calc_cov(result, ps[i], params->sample_size, rng);
+        // hgt_pop_calc_cov_all(result, ps[i]);
         // load buf the result
 		unsigned j;
         for (j = 0; j < params->maxl; j++) {
