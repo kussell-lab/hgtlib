@@ -536,7 +536,7 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
     int weight_size = 2;
     double weights[2];
     weights[0] = params->mu_rate * (double) (p->seq_len * p->size);
-    weights[0] = params->tr_rate * (double) (p->seq_len * p->size);
+    weights[1] = params->tr_rate * (double) (p->seq_len * p->size);
     double total = weights[0] + weights[1];
     double mu = total * time;
     int count = gsl_ran_poisson(r, mu);
