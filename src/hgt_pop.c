@@ -320,14 +320,18 @@ double hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
         hgt_genome_copy(p->genomes[d], p->genomes[b]);
     }
 
-	// update linkages.
-    linkage_birth_dead(p->linkages, b, d, current_time);
-    unsigned i;
-    for (i = 0; i < p->linkage_size; i++) {
-        hgt_linkage ** linkages;
-        linkages = p->locus_linkages[i];
-        linkage_birth_dead(linkages, b, d, current_time);
-    }
+	if (p->linkage_size > 0)
+	{
+		// update linkages.
+		linkage_birth_dead(p->linkages, b, d, current_time);
+		unsigned i;
+		for (i = 0; i < p->linkage_size; i++) {
+			hgt_linkage ** linkages;
+			linkages = p->locus_linkages[i];
+			linkage_birth_dead(linkages, b, d, current_time);
+		}
+	}
+	
 
     free(fitness);
 
@@ -555,7 +559,9 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
                 hgt_genome *donor = p->genomes[d];
                 int frag_len = frag_f(params, r);
                 hgt_genome_transfer(receiver, donor, pos, frag_len);
-                hgt_pop_transfer_linkages(p, d, g, frag_len, pos);
+				if (params->linkage_size > 0) {
+					hgt_pop_transfer_linkages(p, d, g, frag_len, pos);
+				}
             }
         }
     }
