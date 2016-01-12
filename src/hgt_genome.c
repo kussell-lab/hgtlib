@@ -148,6 +148,20 @@ char * hgt_genome_random_sequence(int length, const gsl_rng *r) {
     return seq;
 }
 
+double hgt_genome_distance(hgt_genome *genome1, hgt_genome *genome2, int start, int length) {
+	double distance = 0;
+	int i;
+	for ( i = 0; i < genome1->seq_len; i++)
+	{
+		if (genome1->seq[i] != genome2->seq[i])
+		{
+			distance++;
+		}
+	}
+	distance /= (double)genome1->seq_len;
+	return distance;
+}
+
 char random_char(const gsl_rng *r) {
     unsigned long i = gsl_rng_uniform_int(r, NUM_DNA_CHAR) + 1;
     char c = i + '0';

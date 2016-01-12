@@ -12,11 +12,12 @@ struct _hgt_params {
     
     // transfer parameters
     double tr_rate;                             // transfer rate
-    unsigned int frag_len;                     // fragment length
+    unsigned int frag_len;						// fragment length
     unsigned int tr_hotspot_num;                // number of hotspot in the genome
-    unsigned int tr_hotspot_length;            // length of hotspot
+    unsigned int tr_hotspot_length;				// length of hotspot
     double tr_hotspot_ratio;                    // ratio of transfer rate
-    unsigned int **tr_hotspots;                // locations of transfer hotspots
+    unsigned int **tr_hotspots;					// locations of transfer hotspots
+	double tr_eff;								// transfer efficiency
     
     // mutation parameters
     double mu_rate;                     // mutation rate

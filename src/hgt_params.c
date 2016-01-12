@@ -34,7 +34,9 @@ static int hgt_params_handler(void *params, const char* section, const char* nam
         params1->frag_len = (unsigned int) atoi(value);
     } else if (MATCH("transfer", "distribution")) {
         params1->frag_type = (unsigned int) atoi(value);
-    } else if (MATCH("sample", "size")) {
+	} else if(MATCH("transfer", "efficiency")) {
+		params1->tr_eff = atof(value);
+	} else if (MATCH("sample", "size")) {
         params1->sample_size = (unsigned int) atoi(value);
     } else if (MATCH("sample", "time")) {
         params1->sample_time = (unsigned int) atoi(value);
@@ -88,6 +90,7 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     struct arg_int *frag_len = arg_int0("f", "frag", "<unsigned long>", "fragment length");
     struct arg_dbl *mu_rate = arg_dbl0("u", "mu_rate", "<double>", "mutation rate");
     struct arg_dbl *tr_rate = arg_dbl0("t", "tr_rate", "<double>", "transfer rate");
+	struct arg_dbl *tr_eff = arg_dbl0("e", "tr_eff", "<double>", "transfer efficiency");
     struct arg_int *gen = arg_int0("g", "gen", "<unsigned long>", "generations");
     struct arg_dbl *fitness_mutation_rate = arg_dbl0("z", "b_mu_rate", "<double>", "beneficial mutation rate");
     struct arg_dbl *fitness_scale = arg_dbl0("x", "fitness_scale", "<double>", "selection efficient scale");
@@ -108,9 +111,9 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     struct arg_int *frag_type = arg_int0("b", "frag_type", "<unsigned int>", "fragment type");
     
     struct arg_lit  *help    = arg_lit0(NULL,"help", "print this help and exit");
-    struct arg_end  *end     = arg_end(26);
+    struct arg_end  *end     = arg_end(27);
     
-    void* argtable[] = {size, seq_len, alphabet_size, frag_len, mu_rate, tr_rate, gen, fitness_mutation_rate, fitness_scale, fitness_shape, fitness_coupled, spl_time,
+    void* argtable[] = {size, seq_len, alphabet_size, frag_len, mu_rate, tr_rate, tr_eff, gen, fitness_mutation_rate, fitness_scale, fitness_shape, fitness_coupled, spl_time,
         spl_size, spl_gen, repl, maxl, linkage_size, prefix, config, reproduction, frag_type, help, end};
     int nerrors;
     int exit_code = EXIT_SUCCESS;
@@ -168,8 +171,13 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     params->reprodution = reproduction->ival[0];
     params->frag_type = frag_type->ival[0];
 
+	if (tr_eff->count > 0) {
+		params->tr_eff = tr_eff->dval[0];
+	}
+	else {
+		params->tr_eff = 0;
+	}
 
-    
     if (maxl->count > 0) {
         params->maxl = maxl->ival[0];
     } else {
@@ -245,6 +253,7 @@ int hgt_params_printf(hgt_params *params, FILE *stream) {
     fprintf(stream, "mutation rate = %g\n", params->mu_rate);
     fprintf(stream, "transfer rate = %g\n", params->tr_rate);
     fprintf(stream, "transfer frag = %u\n", params->frag_len);
+	fprintf(stream, "transfer efficiency = %g\n", params->tr_eff);
     fprintf(stream, "generations = %u\n", params->generations);
     fprintf(stream, "sample size = %u\n", params->sample_size);
     fprintf(stream, "sample time = %u\n", params->sample_time);

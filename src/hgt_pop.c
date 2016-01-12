@@ -212,50 +212,6 @@ int hgt_pop_mutate(hgt_pop *p, hgt_params* params, const gsl_rng* r) {
     return EXIT_SUCCESS;
 }
 
-int hgt_pop_transfer(hgt_pop *p, hgt_params* params, unsigned int frag_len, const gsl_rng* r) {
-
-    unsigned int s, donor, receiver, hs_len, pos;
-    double ratio;
-    // randomly choose a reciver
-    receiver = (unsigned int) gsl_rng_uniform_int(r, p->size);
-    // randomly choose a donor.
-    donor = (unsigned int) gsl_rng_uniform_int(r, p->size);
-
-    if (donor != receiver) {
-        if (params -> tr_hotspot_num > 0) { // we need to deal hotspots
-            // first calculate total hotspot length, and its ratio to sequence length
-            hs_len = params->tr_hotspot_num * params->tr_hotspot_length;
-            ratio = (double) hs_len / (double) p->seq_len;
-            
-            // we need to decise a mutation is happened inside hotspot or outside
-            // we flip a coin
-            double v = gsl_rng_uniform(r);
-            if (v < (1-ratio)/(1+(params->tr_hotspot_ratio - 1)*ratio)) { // outside hotspot
-                // we randomly choose a position from sites outside hotspots
-                pos = (unsigned int) gsl_rng_uniform_int(r, p->seq_len - hs_len);
-                // and then search the absolute position on the genome
-                s = search_region(pos, params->tr_hotspots, params->tr_hotspot_num, 0);
-            } else {
-                // similarly, we randomly choose a position from hotspots
-                pos = (unsigned int) gsl_rng_uniform_int(r, hs_len);
-                // and then search the absolute position on the genome
-                s = search_region(pos, params->tr_hotspots, params->tr_hotspot_num, 1) % p->seq_len;
-            }
-        } else { // otherwise, we just randomly choose a site from the genome.
-            s = (unsigned int) gsl_rng_uniform_int(r, p->seq_len);
-        }
-        
-        // do transfer given a genome and a site
-        hgt_genome_transfer(p->genomes[receiver], p->genomes[donor], s, frag_len);
-        if (params->fitness_coupled == 1) {
-            hgt_genome_fitness_transfer(p->genomes[receiver], p->genomes[donor], s, frag_len);
-        }
-        hgt_pop_transfer_linkages(p, donor, receiver, frag_len, s);
-    }
-    
-    return EXIT_SUCCESS;
-}
-
 int hgt_pop_transfer_linkages(hgt_pop *p,
                         unsigned int donor,
                         unsigned int receiver,
@@ -558,9 +514,28 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
                 hgt_genome *receiver = p->genomes[g];
                 hgt_genome *donor = p->genomes[d];
                 int frag_len = frag_f(params, r);
-                hgt_genome_transfer(receiver, donor, pos, frag_len);
-				if (params->linkage_size > 0) {
-					hgt_pop_transfer_linkages(p, d, g, frag_len, pos);
+
+				// calculate distance in the transfer region,
+				// and determine whether they are homologous enough for transfer.
+				int to_transfer = 1;
+				if (params->tr_eff > 0)
+				{
+					to_transfer = 0;
+					double distance, r1, v;
+					distance = hgt_genome_distance(receiver, donor, pos, frag_len);
+					r1 = gsl_rng_uniform(r);
+					v = exp(-distance / params->tr_eff);
+					if (r1 < v)
+					{
+						to_transfer = 1;
+					}
+				}
+
+				if (to_transfer) {
+					hgt_genome_transfer(receiver, donor, pos, frag_len);
+					if (params->linkage_size > 0) {
+						hgt_pop_transfer_linkages(p, d, g, frag_len, pos);
+					}
 				}
             }
         }

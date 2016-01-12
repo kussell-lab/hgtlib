@@ -34,4 +34,5 @@ char * hgt_genome_get_seq(hgt_genome *g);
 unsigned int hgt_genome_get_seq_size(hgt_genome *g);
 unsigned int hgt_genome_get_fitness_size(hgt_genome *g);
 char * hgt_genome_random_sequence(int length, const gsl_rng *r);
+double hgt_genome_distance(hgt_genome *genome1, hgt_genome *genome2, int start, int length);
 #endif /* defined(__hgt__hgt_genome__) */
