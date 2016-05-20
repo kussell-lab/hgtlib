@@ -242,8 +242,9 @@ int main(int argc, char *argv[]) {
         }
         
     }
-    
-    // write_pops(ps, params, rank, numprocs);
+	if (params->save_pop > 0) {
+		write_pops(ps, params, rank, numprocs);
+	}
     
     if (rank == 0) {
         hgt_utils_free_stat_means(p2means, params->maxl, 4);

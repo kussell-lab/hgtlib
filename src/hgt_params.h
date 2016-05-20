@@ -18,6 +18,7 @@ struct _hgt_params {
     double tr_hotspot_ratio;                    // ratio of transfer rate
     unsigned int **tr_hotspots;					// locations of transfer hotspots
 	double tr_eff;								// transfer efficiency
+    int tr_eff_len;                             // length of sequence for calculating distance
     
     // mutation parameters
     double mu_rate;                     // mutation rate
@@ -36,6 +37,7 @@ struct _hgt_params {
     
     // output parameters
     char * prefix;
+	int save_pop;
     
     // fitting paramters
     int fit_range; // fitting range

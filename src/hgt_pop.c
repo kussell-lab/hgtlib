@@ -522,7 +522,7 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
 				{
 					to_transfer = 0;
 					double distance, r1, v;
-					distance = hgt_genome_distance(receiver, donor, pos, frag_len);
+					distance = hgt_genome_distance(receiver, donor, pos, params->tr_eff_len);
 					r1 = gsl_rng_uniform(r);
 					v = exp(-distance / params->tr_eff);
 					if (r1 < v)

@@ -150,15 +150,17 @@ char * hgt_genome_random_sequence(int length, const gsl_rng *r) {
 
 double hgt_genome_distance(hgt_genome *genome1, hgt_genome *genome2, int start, int length) {
 	double distance = 0;
-	int i;
-	for ( i = 0; i < genome1->seq_len; i++)
+	int i, loc;
+
+	for ( i = start; i < start + length; i++)
 	{
-		if (genome1->seq[i] != genome2->seq[i])
+		loc = i % genome1->seq_len;
+		if (genome1->seq[loc] != genome2->seq[loc])
 		{
 			distance++;
 		}
 	}
-	distance /= (double)genome1->seq_len;
+	distance /= (double)(length);
 	return distance;
 }
 

@@ -36,7 +36,9 @@ static int hgt_params_handler(void *params, const char* section, const char* nam
         params1->frag_type = (unsigned int) atoi(value);
 	} else if(MATCH("transfer", "efficiency")) {
 		params1->tr_eff = atof(value);
-	} else if (MATCH("sample", "size")) {
+	} else if (MATCH("transfer", "efficiency_length")) {
+        params1->tr_eff_len = atoi(value);
+    } else if (MATCH("sample", "size")) {
         params1->sample_size = (unsigned int) atoi(value);
     } else if (MATCH("sample", "time")) {
         params1->sample_time = (unsigned int) atoi(value);
@@ -53,7 +55,14 @@ static int hgt_params_handler(void *params, const char* section, const char* nam
         char *prefix = malloc(len);
         memcpy(prefix, value, len);
         params1->prefix = prefix;
-    } else if (MATCH("transfer", "hotspot_number")) {
+	} else if (MATCH("output", "save")) {
+		int to_save = atoi(value);
+		if (to_save != 0) {
+			params1->save_pop = 1;
+		} else {
+			params1->save_pop = 0;
+		}
+	} else if (MATCH("transfer", "hotspot_number")) {
         params1->tr_hotspot_num = (unsigned int) atoi(value);
     } else if (MATCH("transfer", "hotspot_length")) {
         params1->tr_hotspot_length = (unsigned int) atoi(value);
@@ -91,6 +100,7 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     struct arg_dbl *mu_rate = arg_dbl0("u", "mu_rate", "<double>", "mutation rate");
     struct arg_dbl *tr_rate = arg_dbl0("t", "tr_rate", "<double>", "transfer rate");
 	struct arg_dbl *tr_eff = arg_dbl0("e", "tr_eff", "<double>", "transfer efficiency");
+	struct arg_int *tr_eff_len = arg_int0("E", "tr_eff_len", "<int>", "transfer efficiency length");
     struct arg_int *gen = arg_int0("g", "gen", "<unsigned long>", "generations");
     struct arg_dbl *fitness_mutation_rate = arg_dbl0("z", "b_mu_rate", "<double>", "beneficial mutation rate");
     struct arg_dbl *fitness_scale = arg_dbl0("x", "fitness_scale", "<double>", "selection efficient scale");
@@ -105,16 +115,17 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     struct arg_int *linkage_size = arg_int0("k", "linkage_size", "<unsigned int>", "locus linkage size for tracking");
     
     struct arg_file *prefix = arg_file0("o", "output", "<output>", "prefix");
+	struct arg_int *save_pop = arg_int0("s", "save_pop", "<int>", "to save population?");
     
     struct arg_file *config = arg_file0("C", "config", "<output>", "configure file");
     struct arg_int *reproduction = arg_int0("a", "reproduction_model", "<unsigned int>", "reproduction model");
     struct arg_int *frag_type = arg_int0("b", "frag_type", "<unsigned int>", "fragment type");
     
     struct arg_lit  *help    = arg_lit0(NULL,"help", "print this help and exit");
-    struct arg_end  *end     = arg_end(27);
+    struct arg_end  *end     = arg_end(29);
     
-    void* argtable[] = {size, seq_len, alphabet_size, frag_len, mu_rate, tr_rate, tr_eff, gen, fitness_mutation_rate, fitness_scale, fitness_shape, fitness_coupled, spl_time,
-        spl_size, spl_gen, repl, maxl, linkage_size, prefix, config, reproduction, frag_type, help, end};
+    void* argtable[] = {size, seq_len, alphabet_size, frag_len, mu_rate, tr_rate, tr_eff, tr_eff_len, gen, fitness_mutation_rate, fitness_scale, fitness_shape, fitness_coupled, spl_time,
+        spl_size, spl_gen, repl, maxl, linkage_size, prefix, save_pop, config, reproduction, frag_type, help, end};
     int nerrors;
     int exit_code = EXIT_SUCCESS;
     /* verify the argtable[] entries were allocated sucessfully */
@@ -171,11 +182,27 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     params->reprodution = reproduction->ival[0];
     params->frag_type = frag_type->ival[0];
 
+	if (save_pop->count > 0) {
+		params->save_pop = 1;
+	} else {
+		params->save_pop = 0;
+	}
+
+	if (tr_eff_len->count > 0)
+	{
+		params->tr_eff_len = tr_eff_len->ival[0];
+	}
+	else {
+		params->tr_eff_len = params->frag_len;
+	}
+
 	if (tr_eff->count > 0) {
 		params->tr_eff = tr_eff->dval[0];
+        params->tr_eff = 0;
 	}
 	else {
 		params->tr_eff = 0;
+        params->tr_eff_len = 0;
 	}
 
     if (maxl->count > 0) {
@@ -242,6 +269,11 @@ int hgt_params_check_default(hgt_params *params) {
 	if (params->sample_generations <= 0) {
 		params->sample_generations = params->generations;
 	}
+
+    // check transfer efficience length.
+    if (params->tr_eff_len == 0) {
+        params->tr_eff_len = params->frag_len;
+    }
 
     return EXIT_SUCCESS;
 }
