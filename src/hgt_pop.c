@@ -29,6 +29,8 @@ hgt_pop * hgt_pop_alloc(hgt_params *params, const gsl_rng * r) {
     p->generation = 0;
 	p->total_time = 0;
     p->linkage_size = params->linkage_size;
+	p->total_tr_count = 0;
+	p->succ_tr_count = 0;
     
 	// create linkages for tracking.
     p->linkages = (hgt_linkage **) malloc(p->size * sizeof(hgt_linkage*));
@@ -530,12 +532,13 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
 						to_transfer = 1;
 					}
 				}
-
+				p->total_tr_count++;
 				if (to_transfer) {
 					hgt_genome_transfer(receiver, donor, pos, frag_len);
 					if (params->linkage_size > 0) {
 						hgt_pop_transfer_linkages(p, d, g, frag_len, pos);
 					}
+					p->succ_tr_count++;
 				}
             }
         }

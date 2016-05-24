@@ -331,7 +331,7 @@ int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, dou
 int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hgt_params *params, int rank, int numprocs, gsl_rng *rng) {
 	char *func_name = "cov_calc";
 	int count, dest, tag, error_code;
-    count = params->maxl * 4 + 4; // scov + rcov + pxpy + ks + vd
+    count = params->maxl * 4 + 4; // scov + rcov + pxpy + ks + vd + tr_track
     dest = 0;
     tag = 0;
     double *buf;
@@ -354,6 +354,8 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
         }
         buf[4*params->maxl] = result->ks;
         buf[4*params->maxl + 1] = result->vd;
+		buf[4*params->maxl + 2] = (double)ps[i]->succ_tr_count / (double)ps[i]->total_tr_count;
+
         if (rank != 0) {
             error_code = MPI_Send(buf, count, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
 			check_mpi_error_code(error_code, "MPI_Send", func_name);
@@ -378,8 +380,10 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
                 
                 hgt_stat_mean_increment(means[params->maxl][0], buf[4*params->maxl]);
                 hgt_stat_mean_increment(means[params->maxl][1], buf[4*params->maxl+1]);
+				hgt_stat_mean_increment(means[params->maxl][2], buf[4*params->maxl+2]);
                 hgt_stat_variance_increment(vars[params->maxl][0], buf[4*params->maxl]);
                 hgt_stat_variance_increment(vars[params->maxl][1], buf[4*params->maxl+1]);
+				hgt_stat_variance_increment(vars[params->maxl][2], buf[4*params->maxl+2]);
             }
         }
     }
@@ -580,7 +584,7 @@ int write_cov(FILE * fp, unsigned maxl, hgt_stat_mean ***means, hgt_stat_varianc
 }
 
 int write_ks(FILE *fp, unsigned maxl, hgt_stat_mean ***means, hgt_stat_variance ***vars, unsigned long gen) {
-    fprintf(fp, "%g\t%g\t%g\t%g\t%lu\t%lu\n", hgt_stat_mean_get(means[maxl][0]), hgt_stat_mean_get(means[maxl][1]), hgt_stat_variance_get(vars[maxl][0]), hgt_stat_variance_get(vars[maxl][1]), hgt_stat_mean_get_n(means[maxl][0]), gen);
+    fprintf(fp, "%g\t%g\t%g\t%g\t%g\t%g\t%lu\t%lu\n", hgt_stat_mean_get(means[maxl][0]), hgt_stat_mean_get(means[maxl][1]), hgt_stat_mean_get(means[maxl][2]), hgt_stat_variance_get(vars[maxl][0]), hgt_stat_variance_get(vars[maxl][1]), hgt_stat_variance_get(vars[maxl][2]), hgt_stat_mean_get_n(means[maxl][0]), gen);
     fflush(fp);
     return EXIT_SUCCESS;
 }

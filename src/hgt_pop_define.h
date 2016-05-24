@@ -19,5 +19,9 @@ struct _hgt_pop {
     int cache_allocated;
     unsigned int linkage_size;
     unsigned int target_size; // target population size.
+
+	// tracking
+	unsigned long total_tr_count;
+	unsigned long succ_tr_count;
 };
 #endif
