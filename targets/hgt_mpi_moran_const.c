@@ -74,7 +74,7 @@ void file_container_write_headers(file_container *fc) {
 	fprintf(fc->p3, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
 	fprintf(fc->p4, "#l\tp00\tp01\tp10\tp11\tp00 var\tp01 var\tp10 var\tp11 var\tsample n\tgenerations\n");
 	fprintf(fc->cov, "#l\tscov\trcov\tpxpy\ttcov\tscov var\trcov var\tpxpy var\ttcov var\tsample n\tgenerations\n");
-	fprintf(fc->ks, "#ks\tvd\tvar ks\tvar vd\tgenerations\n");
+	fprintf(fc->ks, "#ks\tvd\ttr_succ_rate\tvar ks\tvar vd\tvartr_succ_rate\tgenerations\n");
 	fprintf(fc->t2, "#l\tt2\tt3\tt4\tt2_var\tt3_var\tt4_var\tn\tgeneration\n");
 	fprintf(fc->q2, "#l\tt2\tt3\tt4\tt2_var\tt3_var\tt4_var\tn\tgeneration\n");
 }
