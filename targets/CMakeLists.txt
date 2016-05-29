@@ -1,8 +1,15 @@
 find_package(MPI REQUIRED)
 find_package(GSL REQUIRED)
 
-set(COMM_LIBS ${GSL_LIBRARIES} hgt bstrlib argtable3)
-include_directories(${GSL_INCLUDE_DIR} ${MPI_INCLUDE_PATH} . ../src ../bstrlib)
+if(WIN32)
+	message("In Window, do not load Gperftools")
+else(WIN32)
+	message("find package Gperftools")
+	find_package(Gperftools REQUIRED)
+endif(WIN32)
+
+set(COMM_LIBS ${GSL_LIBRARIES} ${GPERFTOOLS_LIBRARIES} hgt bstrlib argtable3)
+include_directories(${GSL_INCLUDE_DIR} ${MPI_INCLUDE_PATH} ${GPERFTOOLS_INCLUDE_DIR} . ../src ../bstrlib)
 
 add_executable(hgt_mpi_moran_const hgt_mpi_moran_const.c)
 target_link_libraries(hgt_mpi_moran_const ${MPI_LIBRARIES} ${COMM_LIBS})
