@@ -31,6 +31,12 @@ hgt_pop * hgt_pop_alloc(hgt_params *params, const gsl_rng * r) {
     p->linkage_size = params->linkage_size;
 	p->total_tr_count = 0;
 	p->succ_tr_count = 0;
+
+	if (params->fitness_mutation_rate > 0) {
+		p->track_fitness = 1;
+	} else {
+		p->track_fitness = 0;
+	}
     
 	// create linkages for tracking.
     p->linkages = (hgt_linkage **) malloc(p->size * sizeof(hgt_linkage*));
@@ -267,12 +273,16 @@ double hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
     double * fitness;
     // randomly choose a going-death cell.
     d = (unsigned int) gsl_rng_uniform_int(r, p->size);
-    // randomly choose a going-birth one according to the fitness.
-    // first calculate the fitness for each cell.
-    fitness = (double *) malloc(p->size * sizeof(double));
-    hgt_pop_calc_fitness(p, fitness);
-    // randomly choose one proportional to the fitness.
-    b = (unsigned int) hgt_utils_Roulette_Wheel_select(fitness, p->size, r);
+	if (p->track_fitness > 0) {
+    	// randomly choose a going-birth one according to the fitness.
+    	// first calculate the fitness for each cell.
+    	fitness = (double *) malloc(p->size * sizeof(double));
+    	hgt_pop_calc_fitness(p, fitness);
+    	// randomly choose one proportional to the fitness.
+    	b = (unsigned int) hgt_utils_Roulette_Wheel_select(fitness, p->size, r);
+	} else {
+		b = (unsigned int) gsl_rng_uniform_int(r, p->size);
+	}
     // copy the genome and its fitness from b to d.
     if (b != d) {
         hgt_genome_copy(p->genomes[d], p->genomes[b]);
@@ -290,8 +300,9 @@ double hgt_pop_sample_moran(hgt_pop *p, const gsl_rng *r) {
 		}
 	}
 	
-
-    free(fitness);
+	if (p->track_fitness > 0) {
+    	free(fitness);
+	}
 
 	double time;
 	time = hgt_pop_coal_time_moran(p->size, r);
@@ -574,7 +585,7 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
 //
 //	}
 
-	if (p->generation % 10 == 0)
+	if (p->generation % 10 == 0 && params->linkage_size > 0)
 	{
 		hgt_pop_prune_linkages(p);
 	}

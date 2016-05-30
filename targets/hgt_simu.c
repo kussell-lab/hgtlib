@@ -112,10 +112,11 @@ static void loadBar(int x, int n, int r, int w)
     printf("%3d%% [", (int)(ratio*100) );
     
     // Show the load bar.
-    for (int x=0; x<c; x++)
+    int i;
+    for (i=0; i<c; i++)
         printf("=");
     
-    for (int x=c; x<w; x++)
+    for (i=c; i<w; i++)
         printf(" ");
     
     // ANSI Control codes to go back to the

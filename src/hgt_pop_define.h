@@ -23,5 +23,6 @@ struct _hgt_pop {
 	// tracking
 	unsigned long total_tr_count;
 	unsigned long succ_tr_count;
+	unsigned int track_fitness;
 };
 #endif

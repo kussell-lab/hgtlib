@@ -94,6 +94,6 @@ void linkage_update_bsc(hgt_linkage **linkages, int birth, int *death, int num, 
 
 double hgt_pop_coal_time_bsc(unsigned long size, const gsl_rng *r) {
     double time;
-    time = gsl_ran_exponential(r, 2.0);
+    time = gsl_ran_exponential(r, 0.5);
     return time;
 }
