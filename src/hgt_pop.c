@@ -160,9 +160,9 @@ char *hgt_pop_to_json(hgt_pop *p, hgt_params *params){
     unsigned j;
     for (j = 0; j < p->size; j ++) {
         if (j < p->size - 1) {
-            bformata(b, "\"%s\",\n", p->genomes[j]);
+            bformata(b, "\"%s\",\n", p->genomes[j]->seq);
         } else {
-            bformata(b, "\"%s\"\n", p->genomes[j]);
+            bformata(b, "\"%s\"\n", p->genomes[j]->seq);
         }
     }
     bformata(b, "]\n}\n");

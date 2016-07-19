@@ -162,7 +162,6 @@ int hgt_params_parse(hgt_params *params, int argc, char **argv, char * progname)
     /* check if a configure file is supplied, use config ini parser */
     if (config->count > 0) {
         const char * filename = config->filename[0];
-        printf("Using config file: %s\n", filename);
         exit_code = hgt_params_parse_from_ini(params, filename);
         goto exit;
     }
