@@ -833,6 +833,49 @@ int hgt_pop_calc_cov_all(hgt_cov_result *result, hgt_pop *p) {
 }
 
 int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, unsigned sample, const gsl_rng* rng) {
+	// randomly choose a set of genome of sample size.
+	hgt_genome **selected_genomes = (hgt_genome **)malloc(sample * sizeof(hgt_genome*));
+	gsl_ran_choose(rng, selected_genomes, sample, p->genomes, p->size, sizeof(hgt_genome*));
+
+	unsigned seq_len = hgt_genome_get_seq_size(selected_genomes[0]);
+
+	// create binary matrix.
+	unsigned sizeOfMatrix = sample * (sample - 1) / 2;
+	short **matrix = malloc(sizeOfMatrix * sizeof(short*));
+
+	unsigned i, j, k, h;
+	h = 0;
+	for (i = 0; i < sample; i++) {
+		for (j = i + 1; j < sample; j++) {
+			matrix[h] = (short *)malloc(seq_len * sizeof(short));
+			char *seq_a, *seq_b;
+			seq_a = hgt_genome_get_seq(selected_genomes[i]);
+			seq_b = hgt_genome_get_seq(selected_genomes[j]);
+			for (k = 0; k < seq_len; k++) {
+				if (seq_a[k] != seq_b[k]) {
+					matrix[h][k] = 1;
+				}
+				else {
+					matrix[h][k] = 0;
+				}
+			}
+			h++;
+		}
+	}
+
+	free(selected_genomes);
+
+	hgt_cov_result_calc_matrix(result, matrix, sample, p->seq_len);
+
+	for (i = 0; i < sizeOfMatrix; i++) {
+		free(matrix[i]);
+	}
+	free(matrix);
+
+	return EXIT_SUCCESS;
+}
+
+int hgt_pop_calc_cov2(hgt_cov_result *result, hgt_pop *p, unsigned sample, const gsl_rng* rng) {
     // allocate a binary matrix
     short **matrix = malloc(sample*sizeof(short*));
     unsigned i, j;
