@@ -62,7 +62,14 @@ static int hgt_params_handler(void *params, const char* section, const char* nam
 		} else {
 			params1->save_pop = 0;
 		}
-	} else if (MATCH("transfer", "hotspot_number")) {
+	} else if (MATCH("output", "pxy")) {
+        int to_save = atoi(value);
+        if (to_save != 0) {
+            params1->save_pxy = 1;
+        } else {
+            params1->save_pxy = 0;
+        }
+    } else if (MATCH("transfer", "hotspot_number")) {
         params1->tr_hotspot_num = (unsigned int) atoi(value);
     } else if (MATCH("transfer", "hotspot_length")) {
         params1->tr_hotspot_length = (unsigned int) atoi(value);
@@ -305,6 +312,8 @@ int hgt_params_printf(hgt_params *params, FILE *stream) {
     fprintf(stream, "fitness size = %u\n", params->fitness_size);
     fprintf(stream, "reproduction model = %d\n", params->reprodution);
     fprintf(stream, "frag type = %d\n", params->frag_type);
+    fprintf(stream, "output save = %d\n", params->save_pop);
+    fprintf(stream, "output save pxy = %d\n", params->save_pxy);
     return EXIT_SUCCESS;
 }
 

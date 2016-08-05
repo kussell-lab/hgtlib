@@ -38,6 +38,7 @@ struct _hgt_params {
     // output parameters
     char * prefix;
 	int save_pop;
+    int save_pxy;
     
     // fitting paramters
     int fit_range; // fitting range

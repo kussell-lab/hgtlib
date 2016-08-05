@@ -133,15 +133,16 @@ int main(int argc, char *argv[]) {
     hgt_stat_variance ***t2vars;
     hgt_stat_mean ***q2means;
     hgt_stat_variance ***q2vars;
-    
     int linkage_dim = params->linkage_size + 1;
     if (rank == 0) {
-        p2means = hgt_utils_alloc_stat_means(params->maxl, 4);
-        p2vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
-        p3means = hgt_utils_alloc_stat_means(params->maxl, 4);
-        p3vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
-        p4means = hgt_utils_alloc_stat_means(params->maxl, 4);
-        p4vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
+		if (params->save_pxy == 1) {
+        	p2means = hgt_utils_alloc_stat_means(params->maxl, 4);
+        	p2vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
+        	p3means = hgt_utils_alloc_stat_means(params->maxl, 4);
+        	p3vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
+        	p4means = hgt_utils_alloc_stat_means(params->maxl, 4);
+        	p4vars = hgt_utils_alloc_stat_variance(params->maxl, 4);
+		}
         covmeans = hgt_utils_alloc_stat_means(params->maxl+1, 4);
         covvars = hgt_utils_alloc_stat_variance(params->maxl+1, 4);
         t2means = hgt_utils_alloc_stat_means(linkage_dim, 3);
@@ -167,6 +168,9 @@ int main(int argc, char *argv[]) {
     switch (params->frag_type) {
         case 1:
             frag_f = hgt_pop_frag_exp;
+            break;
+        case 2:
+            frag_f = hgt_pop_frag_geom;
             break;
         default:
             frag_f = hgt_pop_frag_constant;
@@ -205,28 +209,35 @@ int main(int argc, char *argv[]) {
         }
         
         start = clock();
-        pxy_calc(p2means, p2vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p2, rng);
-        pxy_calc(p3means, p3vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p3, rng);
-        pxy_calc(p4means, p4vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p4, rng);
+		
+		if (params->save_pxy > 0) {
+        	pxy_calc(p2means, p2vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p2, rng);
+        	pxy_calc(p3means, p3vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p3, rng);
+        	pxy_calc(p4means, p4vars, pxy, d1, d2, ps, params, rank, numprocs, hgt_cov_sample_p4, rng);
+		}
         cov_calc(covmeans, covvars, ps, params, rank, numprocs, rng);
         t2_calc(t2means, t2vars, params, ps, hgt_pop_calc_most_recent_ancestor_time, rank, numprocs, rng);
         t2_calc(q2means, q2vars, params, ps, hgt_pop_calc_most_recent_coal_time, rank, numprocs, rng);
         if (rank == 0) {
-            write_pxy(fc->p2, params->maxl, p2means, p2vars, current_generation);
-            write_pxy(fc->p3, params->maxl, p3means, p3vars, current_generation);
-            write_pxy(fc->p4, params->maxl, p4means, p4vars, current_generation);
+			if (params->save_pxy > 0) {
+            	write_pxy(fc->p2, params->maxl, p2means, p2vars, current_generation);
+            	write_pxy(fc->p3, params->maxl, p3means, p3vars, current_generation);
+            	write_pxy(fc->p4, params->maxl, p4means, p4vars, current_generation);
+			}
             write_cov(fc->cov, params->maxl, covmeans, covvars, current_generation);
             write_ks(fc->ks, params->maxl, covmeans, covvars, current_generation);
             write_t2(fc->t2, t2means, t2vars, linkage_dim, 3, current_generation);
             write_t2(fc->q2, q2means, q2vars, linkage_dim, 3, current_generation);
 			file_container_flush(fc);
             
-            hgt_utils_clean_stat_means(p2means, params->maxl, 4);
-            hgt_utils_clean_stat_means(p3means, params->maxl, 4);
-            hgt_utils_clean_stat_means(p4means, params->maxl, 4);
-            hgt_utils_clean_stat_variances(p2vars, params->maxl, 4);
-            hgt_utils_clean_stat_variances(p3vars, params->maxl, 4);
-            hgt_utils_clean_stat_variances(p4vars, params->maxl, 4);
+			if (params->save_pxy > 0) {
+            	hgt_utils_clean_stat_means(p2means, params->maxl, 4);
+            	hgt_utils_clean_stat_means(p3means, params->maxl, 4);
+            	hgt_utils_clean_stat_means(p4means, params->maxl, 4);
+            	hgt_utils_clean_stat_variances(p2vars, params->maxl, 4);
+            	hgt_utils_clean_stat_variances(p3vars, params->maxl, 4);
+            	hgt_utils_clean_stat_variances(p4vars, params->maxl, 4);
+			}
             hgt_utils_clean_stat_means(covmeans, params->maxl+1, 3);
             hgt_utils_clean_stat_variances(covvars, params->maxl+1, 3);
             hgt_utils_clean_stat_means(t2means, linkage_dim, 3);
@@ -247,34 +258,31 @@ int main(int argc, char *argv[]) {
 	}
     
     if (rank == 0) {
-        hgt_utils_free_stat_means(p2means, params->maxl, 4);
-        hgt_utils_free_stat_means(p3means, params->maxl, 4);
-        hgt_utils_free_stat_means(p4means, params->maxl, 4);
-        hgt_utils_free_stat_variances(p2vars, params->maxl, 4);
-        hgt_utils_free_stat_variances(p3vars, params->maxl, 4);
-        hgt_utils_free_stat_variances(p4vars, params->maxl, 4);
+		if (params->save_pxy > 0) {
+        	hgt_utils_free_stat_means(p2means, params->maxl, 4);
+        	hgt_utils_free_stat_means(p3means, params->maxl, 4);
+        	hgt_utils_free_stat_means(p4means, params->maxl, 4);
+        	hgt_utils_free_stat_variances(p2vars, params->maxl, 4);
+        	hgt_utils_free_stat_variances(p3vars, params->maxl, 4);
+        	hgt_utils_free_stat_variances(p4vars, params->maxl, 4);
+		}
         hgt_utils_free_stat_means(covmeans, params->maxl+1, 4);
         hgt_utils_free_stat_variances(covvars, params->maxl+1, 4);
         hgt_utils_free_stat_means(t2means, linkage_dim, 3);
         hgt_utils_free_stat_variances(t2vars, linkage_dim, 3);
         hgt_utils_free_stat_means(q2means, linkage_dim, 3);
         hgt_utils_free_stat_variances(q2vars, linkage_dim, 3);
-		printf("rank %d: Free mean and variances!\n", rank);
         file_container_close(fc);
 		file_container_destroy(fc);
-        printf("Succesffully close all files!\n");
     }
     
     free(pxy);
     free(d1);
     free(d2);
-    printf("rank %d: Free caches!\n", rank);
     
     hgt_utils_free_populations(ps, params->replicates);
-    printf("rank %d: Free populations!\n", rank);
     gsl_rng_free(rng);
     hgt_params_free(params);
-    printf("rank %d: Free rng and params!\n", rank);
     
 exit:
     MPI_Finalize();
@@ -293,7 +301,7 @@ int pxy_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, double *pxy, dou
 		unsigned n;
         for (n = 0; n < params->sample_size; n++) {
             hgt_pop_calc_dist(ps[i], d1, d2, 1, sample_func, r);
-            hgt_pop_calc_pxy_fft(pxy+(n*params->maxl*4), params->maxl, d1, d2, params->seq_len, 0);
+            hgt_pop_calc_pxy(pxy+(n*params->maxl*4), params->maxl, d1, d2, params->seq_len, 0);
         }
 		unsigned l;
         for (l = 0; l < params->maxl; l++) {
@@ -482,7 +490,7 @@ int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs) {
     } else {
 		FILE *fp = create_file(params->prefix, "populations", "json");
        
-        fprintf(fp, "[\n");
+//        fprintf(fp, "[\n");
         MPI_Status status;
         
         int i;
@@ -496,13 +504,13 @@ int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs) {
             }
             
             fprintf(fp, "%s\n", rc);
-            if (i < numprocs - 1){
-                fprintf(fp, ",\n");
-            }
+//            if (i < numprocs - 1){
+//                fprintf(fp, ",\n");
+//            }
             free(rc);
         }
         
-        fprintf(fp, "]\n");
+//        fprintf(fp, "]\n");
         fclose(fp);
     }
     bdestroy(b);
@@ -523,7 +531,7 @@ bstring to_json(hgt_pop ** ps, hgt_params * params) {
         free(c);
         if (i < params->replicates-1)
         {
-            bformata(b, ",\n");
+            bformata(b, "\n");
         }
     }
     

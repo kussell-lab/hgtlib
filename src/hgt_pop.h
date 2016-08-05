@@ -63,7 +63,7 @@ double hgt_pop_coal_time_bsc(unsigned long p_size, const gsl_rng *r);
 typedef unsigned (*hgt_pop_frag_func)(hgt_params *params, const gsl_rng *r);
 unsigned hgt_pop_frag_constant(hgt_params *params, const gsl_rng *r);
 unsigned hgt_pop_frag_exp(hgt_params *params, const gsl_rng *r);
-
+unsigned hgt_pop_frag_geom(hgt_params *params, const gsl_rng *r);
 int hgt_pop_evolve(hgt_pop *p, 
                    hgt_params *params, 
                    hgt_pop_sample_func sample_f,

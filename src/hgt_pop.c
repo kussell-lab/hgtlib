@@ -165,7 +165,7 @@ char *hgt_pop_to_json(hgt_pop *p, hgt_params *params){
             bformata(b, "\"%s\"\n", p->genomes[j]->seq);
         }
     }
-    bformata(b, "]\n}\n");
+    bformata(b, "]\n}");
     c = bstr2cstr(b, '\n');
     bdestroy(b);
     
@@ -489,6 +489,11 @@ unsigned hgt_pop_frag_constant(hgt_params *params, const gsl_rng *r) {
 
 unsigned hgt_pop_frag_exp(hgt_params *params, const gsl_rng *r) {
     return (unsigned) gsl_ran_exponential(r, (double) params->frag_len);
+}
+
+unsigned hgt_pop_frag_geom(hgt_params *params, const gsl_rng *r) {
+    double p = 1.0 / (double) params->frag_len;
+    return (unsigned) gsl_ran_geometric(r, p);
 }
 
 int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f, hgt_pop_frag_func frag_f, const gsl_rng *r) {
