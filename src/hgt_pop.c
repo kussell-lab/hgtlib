@@ -551,6 +551,10 @@ int hgt_pop_evolve(hgt_pop *p, hgt_params *params, hgt_pop_sample_func sample_f,
 				p->total_tr_count++;
 				if (to_transfer) {
 					hgt_genome_transfer(receiver, donor, pos, frag_len);
+                    if (params->fitness_coupled > 0) {
+                        hgt_genome_fitness_transfer(receiver, donor, pos, frag_len);
+                    }
+
 					if (params->linkage_size > 0) {
 						hgt_pop_transfer_linkages(p, d, g, frag_len, pos);
 					}
