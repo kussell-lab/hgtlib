@@ -287,6 +287,12 @@ int hgt_params_check_default(hgt_params *params) {
         params->tr_eff_len = params->frag_len;
     }
 
+    if (params->sample_bias == 1) {
+        if (params->linkage_size <= 0) {
+            params->linkage_size = 1;
+        }
+    }
+
     return EXIT_SUCCESS;
 }
 

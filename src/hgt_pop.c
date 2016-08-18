@@ -979,11 +979,8 @@ int hgt_pop_ran_choose(hgt_genome **selected_genomes, unsigned int sample_size, 
     qsort(pairs, p->size, sizeof(hgt_utils_pair), hgt_utils_compare);
 
     for (i = 0; i < sample_size; i++) {
-        printf("(%g), ", pairs[i].value);
         selected_genomes[i] = p->genomes[pairs[i].index];
     }
-    printf("%g", pairs[p->size-1].value);
-    printf("\n");
     
     free(times);
 
