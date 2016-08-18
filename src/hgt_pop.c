@@ -957,10 +957,9 @@ int hgt_pop_ran_choose(hgt_genome **selected_genomes, unsigned int sample_size, 
     current_time = hgt_pop_get_time(p);
     double *times;
     times = (double *) malloc(p->size * sizeof(double));
-    hgt_linkage **linkages;
-    linkages = (hgt_linkage **) malloc(2 * sizeof(hgt_linkage *));
-    linkages[0] = p->linkages[index];
     for (i = 0; i < p->size; i++) {
+        hgt_linkage *linkages[2];
+        linkages[0] = p->linkages[index];
         linkages[1] = p->linkages[i];
         double time;
         if (i == index) {
@@ -980,13 +979,11 @@ int hgt_pop_ran_choose(hgt_genome **selected_genomes, unsigned int sample_size, 
     qsort(pairs, p->size, sizeof(hgt_utils_pair), hgt_utils_compare);
 
     for (i = 0; i < sample_size; i++) {
-        printf("(%lu,%g), ", pairs[i].index, pairs[i].value);
+        printf("(%g), ", pairs[i].value);
         selected_genomes[i] = p->genomes[pairs[i].index];
     }
     printf("%g", pairs[p->size-1].value);
     printf("\n");
-
-    free(linkages);
     
     free(times);
 
