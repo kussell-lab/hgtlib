@@ -84,6 +84,6 @@ int hgt_pop_calc_pxy_fft(double *pxy, unsigned int maxl, double *d1, double *d2,
 int hgt_pop_linkage_prune_p(hgt_pop *p);
 
 int hgt_pop_mutate(hgt_pop *p, hgt_params* params, const gsl_rng* r);
-
+int hgt_pop_coal_time_matrix(double **matrix, hgt_pop *p);
 
 #endif

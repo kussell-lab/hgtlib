@@ -995,6 +995,28 @@ int hgt_pop_calc_fitness(hgt_pop *p, double * fitness) {
     return EXIT_SUCCESS;
 }
 
+// Calculate coalescent time for each pair of genome.
+int hgt_pop_coal_time_matrix(double **matrix, hgt_pop *p) {
+    unsigned int i, j;
+    hgt_linkage **linkages;
+    linkages = (hgt_linkage **) malloc(2 * sizeof(hgt_linkage*));
+    double current_time = hgt_pop_get_time(p);
+    for (i = 0; i < p->size; i++) {
+        for (j = 0; j < p->size; j++) {
+            double time = 0;
+            if (i != j) {
+                linkages[0] = p->linkages[i];
+                linkages[1] = p->linkages[j];
+                time = hgt_linkage_find_most_rescent_coalescence_time(linkages, 2);
+                time = current_time - time;
+            }
+            matrix[i][j] = time;
+        }
+    }
+    
+    return EXIT_SUCCESS;
+}
+
 /******** PRIVATE FUNCTIONS ***********/
 
 unsigned long next_power2(unsigned int len) {

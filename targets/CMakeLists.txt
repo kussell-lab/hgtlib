@@ -20,6 +20,10 @@ add_executable(hgt_mpi_moran_const hgt_mpi_moran_const.c)
 target_link_libraries(hgt_mpi_moran_const ${MPI_LIBRARIES} ${COMM_LIBS})
 install(TARGETS hgt_mpi_moran_const DESTINATION bin)
 
+add_executable(hgt_mpi_simu hgt_mpi_simu.c)
+target_link_libraries(hgt_mpi_simu ${MPI_LIBRARIES} ${COMM_LIBS})
+install(TARGETS hgt_mpi_simu DESTINATION bin)
+
 add_executable(hgt_forward_coal_back hgt_forward_coal_back.c hgt_forward_coal_back.h)
 target_link_libraries(hgt_forward_coal_back ${COMM_LIBS})
 install(TARGETS hgt_forward_coal_back DESTINATION bin)
