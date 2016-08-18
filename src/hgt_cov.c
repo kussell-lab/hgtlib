@@ -168,3 +168,35 @@ int hgt_cov_sample_p4(unsigned long *a, unsigned long *b, unsigned long *c, unsi
     }
     return EXIT_SUCCESS;
 }
+
+int hgt_cov_result_length(int maxl) {
+    return maxl * 4 + 2;
+}
+
+int hgt_cov_result_to_array(double *buf, hgt_cov_result *result, int maxl) {
+    unsigned j;
+    for (j = 0; j < maxl; j++) {
+        buf[4*j] = result->scov[j];
+        buf[4*j+1] = result->rcov[j];
+        buf[4*j+2] = result->pxpy[j];
+        buf[4*j+3] = result->tcov[j];
+    }
+    buf[4*maxl] = result->ks;
+    buf[4*maxl + 1] = result->vd;
+
+    return EXIT_SUCCESS;
+}
+
+int hgt_cov_array_to_result(double *buf, hgt_cov_result *result, int maxl) {
+    unsigned j;
+    for (j = 0; j < maxl; j++) {
+        result->scov[j] = buf[4*j];
+        result->rcov[j] = buf[4*j+1];
+        result->pxpy[j] = buf[4*j+2];
+        result->tcov[j] = buf[4*j+3];
+    }
+    result->ks = buf[4*maxl];
+    result->vd = buf[4*maxl + 1];
+
+    return EXIT_SUCCESS;
+}

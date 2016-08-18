@@ -31,4 +31,8 @@ int hgt_cov_result_calc_matrix(hgt_cov_result *r, short **matrix, unsigned long 
 int hgt_cov_sample_p2(unsigned long *a, unsigned long *b, unsigned long *c, unsigned long *d, unsigned long p_size, const gsl_rng *r);
 int hgt_cov_sample_p3(unsigned long *a, unsigned long *b, unsigned long *c, unsigned long *d, unsigned long p_size, const gsl_rng *r);
 int hgt_cov_sample_p4(unsigned long *a, unsigned long *b, unsigned long *c, unsigned long *d, unsigned long p_size, const gsl_rng *r);
+
+int hgt_cov_result_length(int maxl);
+int hgt_cov_result_to_array(double *buf, hgt_cov_result *result, int maxl);
+int hgt_cov_array_to_result(double *buf, hgt_cov_result *result, int maxl);
 #endif

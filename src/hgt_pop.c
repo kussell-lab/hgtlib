@@ -985,9 +985,6 @@ int hgt_pop_ran_choose(hgt_genome **selected_genomes, unsigned int sample_size, 
         selected_genomes[i] = p->genomes[pairs[i]->index];
     }
 
-    for (i = 0; i < 2; i++) {
-        free(linkages[i]);
-    }
     free(linkages);
     for (i = 0; i < p->size; i++) {
         free(pairs[i]);
