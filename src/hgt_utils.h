@@ -14,6 +14,14 @@
 #ifndef hgt_hgt_utils_h
 #define hgt_hgt_utils_h
 
+typedef struct _hgt_utils_pair hgt_utils_pair;
+struct _hgt_utils_pair {
+    unsigned long int index;
+    double value;
+};
+
+int hgt_utils_compare(const void *a, const void *b);
+
 hgt_pop ** hgt_utils_alloc_populations(hgt_params *params, int rank, gsl_rng *rng);
 void hgt_utils_free_populations(hgt_pop ** pops, int num);
 

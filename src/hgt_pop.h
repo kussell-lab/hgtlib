@@ -86,4 +86,6 @@ int hgt_pop_linkage_prune_p(hgt_pop *p);
 int hgt_pop_mutate(hgt_pop *p, hgt_params* params, const gsl_rng* r);
 int hgt_pop_coal_time_matrix(double **matrix, hgt_pop *p);
 
+int hgt_pop_ran_choose(hgt_genome **selected_genomes, unsigned int sample_size, hgt_pop *p, const gsl_rng *rng);
+int hgt_pop_calc_cov_bias(hgt_cov_result *result, hgt_pop *p, unsigned sample_size1, unsigned cluster_num1, unsigned sample_size2, unsigned cluster_num2, const gsl_rng *rng);
 #endif

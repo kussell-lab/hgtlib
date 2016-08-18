@@ -34,6 +34,9 @@ struct _hgt_params {
     unsigned int replicates;   // replicates
     unsigned int maxl;         // maxl
 	unsigned int sample_generations; // sample generations
+    unsigned int cluster_num;
+    unsigned int cluster_size;
+    unsigned int sample_bias;
     
     // output parameters
     char * prefix;

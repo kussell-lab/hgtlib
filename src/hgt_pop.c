@@ -887,6 +887,117 @@ int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, unsigned sample, const 
 	return EXIT_SUCCESS;
 }
 
+int hgt_pop_calc_cov_bias(hgt_cov_result *result, hgt_pop *p, unsigned sample_size1, unsigned cluster_num1, unsigned sample_size2, unsigned cluster_num2, const gsl_rng *rng) {
+    int total_cluster_size;
+    total_cluster_size = cluster_num1 * sample_size1 + cluster_num2 * sample_size2;
+    
+    hgt_genome **selected_genomes = (hgt_genome **) malloc(total_cluster_size * sizeof(hgt_genome*));
+    int index = 0;
+    int i;
+    
+    for (i = 0; i < cluster_num1; i++) {
+        hgt_pop_ran_choose(selected_genomes+index, sample_size1, p, rng);
+        index += sample_size1;
+    }
+    for (i = 0; i < cluster_num2; i++) {
+        hgt_pop_ran_choose(selected_genomes+index, sample_size2, p, rng);
+        index += sample_size2;
+    }
+
+    unsigned seq_len = hgt_genome_get_seq_size(selected_genomes[0]);
+
+	// create binary matrix.
+	unsigned sizeOfMatrix = total_cluster_size * (total_cluster_size - 1) / 2;
+	short **matrix = malloc(sizeOfMatrix * sizeof(short*));
+
+	unsigned j, k, h;
+	h = 0;
+	for (i = 0; i < total_cluster_size; i++) {
+		for (j = i + 1; j < total_cluster_size; j++) {
+			matrix[h] = (short *)malloc(seq_len * sizeof(short));
+			char *seq_a, *seq_b;
+			seq_a = hgt_genome_get_seq(selected_genomes[i]);
+			seq_b = hgt_genome_get_seq(selected_genomes[j]);
+			for (k = 0; k < seq_len; k++) {
+				if (seq_a[k] != seq_b[k]) {
+					matrix[h][k] = 1;
+				}
+				else {
+					matrix[h][k] = 0;
+				}
+			}
+			h++;
+		}
+	}
+
+	free(selected_genomes);
+
+	hgt_cov_result_calc_matrix(result, matrix, sizeOfMatrix, seq_len);
+
+	for (i = 0; i < sizeOfMatrix; i++) {
+		free(matrix[i]);
+	}
+	free(matrix);
+
+    return EXIT_SUCCESS;
+}
+
+int hgt_pop_ran_choose(hgt_genome **selected_genomes, unsigned int sample_size, hgt_pop *p, const gsl_rng *rng) {
+    unsigned long int index;
+    index = gsl_rng_uniform_int(rng, p->size);
+    if (sample_size == 1) {
+        selected_genomes[0] = p->genomes[index];
+        return EXIT_SUCCESS;
+    } else if (sample_size < 1) {
+        return EXIT_FAILURE;
+    }
+
+    int i;
+    double current_time;
+    current_time = hgt_pop_get_time(p);
+    double *times;
+    times = (double *) malloc(p->size * sizeof(double));
+    hgt_linkage **linkages;
+    linkages = (hgt_linkage **) malloc(2 * sizeof(hgt_linkage *));
+    linkages[0] = p->linkages[index];
+    for (i = 0; i < p->size; i++) {
+        linkages[1] = p->linkages[i];
+        double time;
+        if (i == index) {
+            time = 0;
+        } else {
+            time = current_time - hgt_linkage_find_most_rescent_coalescence_time(linkages, 2);
+        }
+        times[i] = time;
+    }
+
+    hgt_utils_pair **pairs;
+    pairs = (hgt_utils_pair **) malloc(p->size * sizeof(hgt_utils_pair *));
+    for (i = 0; i < p->size; i++) {
+        pairs[i] = (hgt_utils_pair *) malloc(sizeof(hgt_utils_pair));
+        pairs[i]->index = i;
+        pairs[i]->value = times[i];
+    }
+
+    qsort(pairs, p->size, sizeof(hgt_utils_pair*), hgt_utils_compare);
+
+    for (i = 0; i < sample_size; i++) {
+        selected_genomes[i] = p->genomes[pairs[i]->index];
+    }
+
+    for (i = 0; i < 2; i++) {
+        free(linkages[i]);
+    }
+    free(linkages);
+    for (i = 0; i < p->size; i++) {
+        free(pairs[i]);
+    }
+    free(pairs);
+    free(times);
+
+    return EXIT_SUCCESS;
+}
+
 int hgt_pop_calc_cov2(hgt_cov_result *result, hgt_pop *p, unsigned sample, const gsl_rng* rng) {
     // allocate a binary matrix
     short **matrix = malloc(sample*sizeof(short*));

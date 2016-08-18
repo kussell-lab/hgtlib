@@ -188,3 +188,14 @@ int hgt_utils_Roulette_Wheel_select(double * weights, int size, const gsl_rng *r
 
     return -1;
 }
+
+int hgt_utils_compare(const void *a, const void *b) {
+    hgt_utils_pair *aa = (hgt_utils_pair *)a;
+    hgt_utils_pair *bb = (hgt_utils_pair *)b;
+    if (aa->value > bb->value) {
+        return 1;
+    } else if (aa->value < bb->value) {
+        return -1;
+    }
+    return 0;
+}

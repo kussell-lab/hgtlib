@@ -46,6 +46,12 @@ static int hgt_params_handler(void *params, const char* section, const char* nam
 		params1->sample_generations = (unsigned int)atoi(value);
 	} else if (MATCH("sample", "replicates")) {
         params1->replicates = (unsigned int) atoi(value);
+    } else if (MATCH("sample", "bias")) {
+        params1->sample_bias = (unsigned int) atoi(value);
+    } else if (MATCH("sample", "cluster_number")) {
+        params1->cluster_num = (unsigned int) atoi(value);
+    } else if (MATCH("sample", "cluster_size")) {
+        params1->cluster_size = (unsigned int) atoi(value);
     } else if (MATCH("linkage", "size")) {
         params1->linkage_size = (unsigned int) atoi(value);
     } else if (MATCH("cov", "maxl")) {

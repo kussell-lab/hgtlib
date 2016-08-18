@@ -256,7 +256,6 @@ int main(int argc, char *argv[]) {
     }
 	if (params->save_pop > 0) {
 		write_pops(ps, params, rank, numprocs);
-        write_coal_time_matrix(ps, params, rank, numprocs);
 	}
     
     if (rank == 0) {
@@ -351,7 +350,17 @@ int cov_calc(hgt_stat_mean ***means, hgt_stat_variance ***vars, hgt_pop **ps, hg
 	unsigned i;
     for (i = 0; i < params->replicates; i++) {
         // calculate covariance result
-         hgt_pop_calc_cov(result, ps[i], params->sample_size, rng);
+        if (params->sample_bias == 1) {
+            int sample_size1, cluster_num1, sample_size2, cluster_num2;
+            sample_size1 = params->sample_size;
+            cluster_num1 = 1;
+            sample_size2 = params->cluster_size;
+            cluster_num2 = params->cluster_num;
+            hgt_pop_calc_cov_bias(result, ps[i], sample_size1, cluster_num1, sample_size2, cluster_num2, rng);
+        } else {
+            hgt_pop_calc_cov(result, ps[i], params->sample_size, rng);
+        }
+         
         // hgt_pop_calc_cov_all(result, ps[i]);
         // load buf the result
 		unsigned j;
