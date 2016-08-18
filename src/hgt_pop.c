@@ -966,30 +966,28 @@ int hgt_pop_ran_choose(hgt_genome **selected_genomes, unsigned int sample_size, 
         if (i == index) {
             time = 0;
         } else {
-            time = current_time - hgt_linkage_find_most_rescent_coalescence_time(linkages, 2);
+            time = current_time - hgt_linkage_find_most_rescent_ancestor_time(linkages, 2);
         }
         times[i] = time;
     }
 
-    hgt_utils_pair **pairs;
-    pairs = (hgt_utils_pair **) malloc(p->size * sizeof(hgt_utils_pair *));
+    hgt_utils_pair pairs[p->size];
     for (i = 0; i < p->size; i++) {
-        pairs[i] = (hgt_utils_pair *) malloc(sizeof(hgt_utils_pair));
-        pairs[i]->index = i;
-        pairs[i]->value = times[i];
+        pairs[i].index = i;
+        pairs[i].value = times[i];
     }
 
-    qsort(pairs, p->size, sizeof(hgt_utils_pair*), hgt_utils_compare);
+    qsort(pairs, p->size, sizeof(hgt_utils_pair), hgt_utils_compare);
 
     for (i = 0; i < sample_size; i++) {
-        selected_genomes[i] = p->genomes[pairs[i]->index];
+        printf("(%lu,%g), ", pairs[i].index, pairs[i].value);
+        selected_genomes[i] = p->genomes[pairs[i].index];
     }
+    printf("%g", pairs[p->size-1].value);
+    printf("\n");
 
     free(linkages);
-    for (i = 0; i < p->size; i++) {
-        free(pairs[i]);
-    }
-    free(pairs);
+    
     free(times);
 
     return EXIT_SUCCESS;

@@ -196,6 +196,7 @@ int hgt_utils_compare(const void *a, const void *b) {
         return 1;
     } else if (aa->value < bb->value) {
         return -1;
+    } else {
+        return 0;
     }
-    return 0;
 }
