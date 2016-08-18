@@ -514,22 +514,21 @@ int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs) {
     return EXIT_SUCCESS;
 }
 
-bstring to_json(hgt_pop ** ps, hgt_params * params) {
+bstring to_json(hgt_pop *p, hgt_params * params) {
     unsigned i;
     char *c;
     bstring b;
     b = bfromcstr("");
     
-    for (i = 0; i < params->replicates; i ++) {
-        hgt_pop * pop = ps[i];
-        c = hgt_pop_to_json(pop, params);
-        bformata(b, "%s", c);
-        free(c);
-        if (i < params->replicates-1)
-        {
-            bformata(b, "\n");
-        }
+    
+    c = hgt_pop_to_json(p, params);
+    bformata(b, "%s", c);
+    free(c);
+    if (i < params->replicates-1)
+    {
+        bformata(b, "\n");
     }
+    
     
     return b;
 }
@@ -627,40 +626,38 @@ int write_coal_time_matrix(hgt_pop **ps, hgt_params *params, int rank, int numpr
     }
 
     double *values;
-    int length = params->size * params->size * params->replicates;
+    int length = params->size * params->size;
     values = (double *)malloc(length * sizeof(double));
 
     for (i = 0; i < params->replicates; i++) {
+        // calculate coalescent time.
         hgt_pop_coal_time_matrix(matrix, ps[i]);
-        int start = i * params->size * params->size;
         int k, h, index;
         for (k = 0; k < params->size; k++) {
             for (h = 0; h < params->size; h++) {
-                index = start + k * params->size + h;
+                index = k * params->size + h;
                 values[index] = matrix[k][h];
             }
         }
-    }
 
-    int dest, tag;
-    dest = 0; 
-    tag = 0;
-    if (rank != 0) {
-        MPI_Send(values, length, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
-    } else {
-        MPI_Status status;
-        for (i = 0; i < numprocs; i++) {
-            if (i != 0) {
-                MPI_Recv(values, length, MPI_DOUBLE, i, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            }
-            int j, k, h, index;
-            for (j = 0; j < params->replicates; j++) {
+        int dest, tag;
+        dest = 0; 
+        tag = 0;
+        if (rank != 0) {
+            MPI_Send(values, length, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
+        } else {
+            MPI_Status status;
+            for (i = 0; i < numprocs; i++) {
+                if (i != 0) {
+                    MPI_Recv(values, length, MPI_DOUBLE, i, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                }
+                int k, h, index;
                 for (k = 0; k < params->size; k++) {
                     if (k == 0) {
                         fprintf(fp, "[");
                     }
                     for (h = 0; h < params->size; h++) {
-                        index = j * params->size * params->size + k * params->size + h;
+                        index = k * params->size + h;
                         if (h == 0) {
                             fprintf(fp, "[");
                         } else {
@@ -676,7 +673,7 @@ int write_coal_time_matrix(hgt_pop **ps, hgt_params *params, int rank, int numpr
                 }
             }
         }
-    }
+    }  
 
     for (i = 0; i < params->size; i++) {
         free(matrix[i]);
