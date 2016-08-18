@@ -843,7 +843,10 @@ int hgt_pop_calc_cov_all(hgt_cov_result *result, hgt_pop *p) {
 
 int hgt_pop_calc_cov(hgt_cov_result *result, hgt_pop *p, unsigned sample, const gsl_rng* rng) {
 	// randomly choose a set of genome of sample size.
-	hgt_genome **selected_genomes = (hgt_genome **)malloc(sample * sizeof(hgt_genome*));
+	if (sample > p->size) {
+        sample = p->size;
+    }
+    hgt_genome **selected_genomes = (hgt_genome **)malloc(sample * sizeof(hgt_genome*));
 	gsl_ran_choose(rng, selected_genomes, sample, p->genomes, p->size, sizeof(hgt_genome*));
 
 	unsigned seq_len = hgt_genome_get_seq_size(selected_genomes[0]);
