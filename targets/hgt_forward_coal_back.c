@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
 		}
 	}
 	end = clock();
-	printf("running %u generations before sampling, using time = %lld sec\n", params->generations, (end - start) / CLOCKS_PER_SEC);
+	printf("running %u generations before sampling, using time = %ld sec\n", params->generations, (end - start) / CLOCKS_PER_SEC);
 
     unsigned i;
     for (i = 0; i < params->sample_time; i++) {
@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
         hgt_utils_batch_evolve(ps, params->replicates, params, sample_f, frag_f, r);
         sample(ps, params, 2, fc, r);
 		end = clock();
-		printf("running %u generations at sample %d, using time = %lld sec\n", params->sample_generations, i, (end - start) / CLOCKS_PER_SEC);
+		printf("running %u generations at sample %d, using time = %ld sec\n", params->sample_generations, i, (end - start) / CLOCKS_PER_SEC);
     }
 
     close_file_container(fc);
