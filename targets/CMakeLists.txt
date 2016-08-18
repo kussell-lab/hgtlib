@@ -1,7 +1,7 @@
 find_package(MPI REQUIRED)
 find_package(GSL REQUIRED)
 
-set(COMM_LIBS ${GSL_LIBRARIES} ${GPERFTOOLS_LIBRARIES} hgt bstrlib argtable3)
+set(COMM_LIBS ${GSL_LIBRARIES} ${GPERFTOOLS_LIBRARIES} hgt bstrlib argtable3 m)
 set(COMM_INCL ${GSL_INCLUDE_DIR} ${MPI_INCLUDE_PATH} . ../src ../bstrlib)
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
     message("debug mode")
@@ -23,6 +23,10 @@ install(TARGETS hgt_mpi_moran_const DESTINATION bin)
 add_executable(hgt_mpi_no_calc hgt_mpi_no_calc.c)
 target_link_libraries(hgt_mpi_no_calc ${MPI_LIBRARIES} ${COMM_LIBS})
 install(TARGETS hgt_mpi_no_calc DESTINATION bin)
+
+add_executable(hgt_mpi_simu hgt_mpi_simu.c)
+target_link_libraries(hgt_mpi_simu ${MPI_LIBRARIES} ${COMM_LIBS})
+install(TARGETS hgt_mpi_simu DESTINATION bin)
 
 add_executable(hgt_forward_coal_back hgt_forward_coal_back.c hgt_forward_coal_back.h)
 target_link_libraries(hgt_forward_coal_back ${COMM_LIBS})
