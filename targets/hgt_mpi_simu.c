@@ -477,58 +477,61 @@ int update_t2(hgt_stat_mean ***t2means, hgt_stat_variance ***t2vars, double *buf
 }
 
 int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs) {
-    bstring to_json(hgt_pop **ps, hgt_params *params);
-    
-    int dest, tag;
-    dest = 0;
-    tag = 0;
-    
-    char *rc;
-    bstring b = to_json(ps, params);
-    rc = bstr2cstr(b, '\n');
-    if (rank != 0) {
-        MPI_Send(rc, blength(b), MPI_CHAR, dest, tag, MPI_COMM_WORLD);
-        free(rc);
-    } else {
-		FILE *fp = create_file(params->prefix, "populations", "json");
-   
-        MPI_Status status;
-        
-        int i;
-        for (i = 0; i < numprocs; i++) {
-            if (i != 0) {
-                MPI_Probe(i, tag, MPI_COMM_WORLD, &status);
-                int count;
-                MPI_Get_count(&status, MPI_CHAR, &count);
-                rc = malloc(count*sizeof(char));
-                MPI_Recv(rc, count, MPI_CHAR, i, tag, MPI_COMM_WORLD, &status);
-            }
+    bstring to_json(hgt_pop *p, hgt_params *params);
+    FILE *fp;
+    if (rank == 0) {
+        fp = create_file(params->prefix, "populations", "json");
+    }
+
+    int i;
+    for (i = 0; i < params->replicates; i++) {
+        bstring b = to_json(ps[i], params);
+        char *rc = bstr2cstr(b, '\n');
+
+        int dest, tag;
+        dest = 0;
+        tag = i;
+
+        if (rank != 0) {
+            MPI_Send(rc, blength(b), MPI_CHAR, dest, tag, MPI_COMM_WORLD);
+        } else {
             
-            fprintf(fp, "%s\n", rc);
-            free(rc);
+            int k;
+            for (k = 0; k < numprocs; k++) {
+                if (k != dest) {
+                    MPI_Status status;
+                    int count;
+                    char *buf;
+                    MPI_Probe(k, tag, MPI_COMM_WORLD, &status);
+                    MPI_Get_count(&status, MPI_CHAR, &count);
+                    buf = malloc(count * sizeof(char));
+                    MPI_Recv(buf, count, MPI_CHAR, k, tag, MPI_COMM_WORLD, &status);
+                    fprintf(fp, "%s", buf);
+                    free(buf);
+                } else {
+                    fprintf(fp, "%s", rc);
+                }
+            }
         }
+
+        free(rc);
+        bdestroy(b);
+    }
+
+    if (rank == 0) {
         fclose(fp);
     }
-    bdestroy(b);
     
     return EXIT_SUCCESS;
 }
 
 bstring to_json(hgt_pop *p, hgt_params * params) {
-    unsigned i;
     char *c;
     bstring b;
     b = bfromcstr("");
-    
-    
     c = hgt_pop_to_json(p, params);
     bformata(b, "%s", c);
     free(c);
-    if (i < params->replicates-1)
-    {
-        bformata(b, "\n");
-    }
-    
     
     return b;
 }
@@ -647,9 +650,10 @@ int write_coal_time_matrix(hgt_pop **ps, hgt_params *params, int rank, int numpr
             MPI_Send(values, length, MPI_DOUBLE, dest, tag, MPI_COMM_WORLD);
         } else {
             MPI_Status status;
-            for (i = 0; i < numprocs; i++) {
-                if (i != 0) {
-                    MPI_Recv(values, length, MPI_DOUBLE, i, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            int j;
+            for (j = 0; j < numprocs; j++) {
+                if (j != 0) {
+                    MPI_Recv(values, length, MPI_DOUBLE, j, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                 }
                 int k, h, index;
                 for (k = 0; k < params->size; k++) {
