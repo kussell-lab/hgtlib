@@ -289,7 +289,9 @@ int hgt_simu_results_increment(hgt_simu_results *r, hgt_cov_result *cov_result) 
         hgt_stat_meanvar_list_increment(r->cs, i, cov_result->scov[i]);
         hgt_stat_meanvar_list_increment(r->cm, i, cov_result->tcov[i]);
         hgt_stat_meanvar_list_increment(r->cr, i, cov_result->rcov[i]);
-        hgt_stat_meanvar_list_increment(r->cm2, i, cov_result->tcov[i]/cov_result->ks);
+        if (cov_result->ks > 0) {
+            hgt_stat_meanvar_list_increment(r->cm2, i, cov_result->tcov[i]/cov_result->ks);
+        }
     }
 
     hgt_stat_meanvar_list_increment(r->ks, 0, cov_result->ks);
