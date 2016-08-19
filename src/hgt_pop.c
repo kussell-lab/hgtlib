@@ -970,7 +970,8 @@ int hgt_pop_ran_choose(hgt_genome **selected_genomes, unsigned int sample_size, 
         times[i] = time;
     }
 
-    hgt_utils_pair pairs[p->size];
+    hgt_utils_pair *pairs;
+	pairs = (hgt_utils_pair *)malloc(p->size * sizeof(hgt_utils_pair));
     for (i = 0; i < p->size; i++) {
         pairs[i].index = i;
         pairs[i].value = times[i];
@@ -983,6 +984,7 @@ int hgt_pop_ran_choose(hgt_genome **selected_genomes, unsigned int sample_size, 
     }
     
     free(times);
+	free(pairs);
 
     return EXIT_SUCCESS;
 }
