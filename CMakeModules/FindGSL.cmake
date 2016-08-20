@@ -25,8 +25,8 @@
 
 IF(WIN32)
 
-  SET(GSL_MINGW_PREFIX "c:/msys/local" )
-  SET(GSL_MSVC_PREFIX "$ENV{LIB_DIR}")
+  SET(GSL_MINGW_PREFIX "C:/msys64/mingw64" )
+  SET(GSL_MSVC_PREFIX "$ENV{HOME}/workspace/gsl")
   FIND_LIBRARY(GSL_LIB gsl PATHS 
     ${GSL_MINGW_PREFIX}/lib 
     ${GSL_MSVC_PREFIX}/lib

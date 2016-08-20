@@ -1,7 +1,7 @@
 find_package(MPI REQUIRED)
 find_package(GSL REQUIRED)
 
-set(COMM_LIBS ${GSL_LIBRARIES} ${GPERFTOOLS_LIBRARIES} hgt bstrlib argtable3 m)
+set(COMM_LIBS ${GSL_LIBRARIES} ${GPERFTOOLS_LIBRARIES} hgt bstrlib argtable3)
 set(COMM_INCL ${GSL_INCLUDE_DIR} ${MPI_INCLUDE_PATH} . ../src ../bstrlib)
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
     message("debug mode")
