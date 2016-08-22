@@ -158,13 +158,13 @@ char *pop_to_json(hgt_pop *p, hgt_params *params) {
 	for (j = 0; j < p->size; j++) {
 		bformata(b, "[");
 		for (k = 0; k < p->size; k++) {
-			bformata(b, "%h", matrix[j][k]);
+			bformata(b, "%d", matrix[j][k]);
 			if (k < p->size - 1) {
 				bformata(b, ",");
 			}
 		}
 		bformata(b, "]");
-		if (k < p->size - 1) {
+		if (j < p->size - 1) {
 			bformata(b, ",");
 		}
 		bformata(b, "\n");
