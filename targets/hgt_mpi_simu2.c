@@ -281,8 +281,11 @@ int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs) {
 	int dest, tag;
 	dest = 0;
 	tag = 0;
-
-	FILE *fp = create_file(params->prefix, "populations", "json");
+  
+    FILE *fp;  
+    if (rank == 0) {
+	    fp = create_file(params->prefix, "populations", "json");
+    }
 	int k;
 	for (k = 0; k < params->replicates; k++) {
 		hgt_pop *p = ps[k];
@@ -291,8 +294,7 @@ int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs) {
 		if (rank != 0) {
 			MPI_Send(rc, blength(b), MPI_CHAR, dest, tag, MPI_COMM_WORLD);
 			free(rc);
-		}
-		else {
+		} else {
 			MPI_Status status;
 			int i;
 			for (i = 0; i < numprocs; i++) {
@@ -310,7 +312,9 @@ int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs) {
 		bdestroy(b);
 	}
 
-	fclose(fp);
+    if (rank == 0) {
+	    fclose(fp);
+    }
 
 	return EXIT_SUCCESS;
 }
