@@ -200,7 +200,7 @@ short int ** get_coal_rank_matrix(hgt_pop *p) {
 
 double **get_coal_time_matrix(hgt_pop *p) {
 	double **matrix;
-	matrix = (double *)malloc(p->size * sizeof(double*));
+	matrix = (double **)malloc(p->size * sizeof(double*));
 	int i;
 	for (i = 0; i < p->size; i++) {
 		matrix[i] = get_coal_times(p, i);
