@@ -27,6 +27,8 @@ int check_mpi_error_code(int error_code, char *ops_type, char *parent_func);
 char *pop_to_json(hgt_pop *p, hgt_params *params);
 short int ** get_coal_rank_matrix(hgt_pop *p);
 short int * get_coal_ranks(hgt_pop *p, int index);
+double ** get_coal_time_matrix(hgt_pop *p);
+double * get_coal_times(hgt_pop *p, int index);
 int write_pops(hgt_pop **ps, hgt_params *params, int rank, int numprocs);
 bstring to_json(hgt_pop *pop, hgt_params *params);
 
@@ -152,13 +154,13 @@ char *pop_to_json(hgt_pop *p, hgt_params *params) {
 	}
 	bformata(b, "],\n");
 
-	short int **matrix = get_coal_rank_matrix(p);
+	double **matrix = get_coal_time_matrix(p);
 	bformata(b, "\"Ranks\": [\n");
 	int k;
 	for (j = 0; j < p->size; j++) {
 		bformata(b, "[");
 		for (k = 0; k < p->size; k++) {
-			bformata(b, "%d", matrix[j][k]);
+			bformata(b, "%g", matrix[j][k]);
 			if (k < p->size - 1) {
 				bformata(b, ",");
 			}
@@ -194,6 +196,38 @@ short int ** get_coal_rank_matrix(hgt_pop *p) {
 
 
 	return matrix;
+}
+
+double **get_coal_time_matrix(hgt_pop *p) {
+	double **matrix;
+	matrix = (double *)malloc(p->size * sizeof(double*));
+	int i;
+	for (i = 0; i < p->size; i++) {
+		matrix[i] = get_coal_times(p, i);
+	}
+	return matrix;
+}
+
+double *get_coal_times(hgt_pop *p, int index) {
+	double *times;
+	times = (double *)malloc(p->size * sizeof(double));
+	double current_time;
+	current_time = hgt_pop_get_time(p);
+	int i;
+	for (i = 0; i < p->size; i++) {
+		hgt_linkage *linkages[2];
+		linkages[0] = p->linkages[index];
+		linkages[1] = p->linkages[i];
+		double time;
+		if (i == index) {
+			time = 0;
+		}
+		else {
+			time = current_time - hgt_linkage_find_most_rescent_ancestor_time(linkages, 2);
+		}
+		times[i] = time;
+	}
+	return times;
 }
 
 short int * get_coal_ranks(hgt_pop *p, int index) {
