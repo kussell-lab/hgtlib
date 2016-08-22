@@ -98,8 +98,12 @@ int main(int argc, char *argv[]) {
 		printf("%d, evolve using time = %ld sec\n", i, (end - start) / CLOCKS_PER_SEC);
 	}
     
-    
+	start = clock();
 	write_pops(ps, params, rank, numprocs);
+	end = clock();
+	if (rank == 0) {
+		printf("%d, writting using time = %ld sec\n", i, (end - start) / CLOCKS_PER_SEC);
+	}
     
     // hgt_utils_free_populations(ps, params->replicates);
     gsl_rng_free(rng);
